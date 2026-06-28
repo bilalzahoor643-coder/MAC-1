@@ -34,6 +34,7 @@
                                     <Grid.RenderTransform>
                                         <TransformGroup>
                                             <TranslateTransform x:Name="iconTranslate" Y="0"/>
+                                            <RotateTransform x:Name="iconRotate" Angle="0"/>
                                         </TransformGroup>
                                     </Grid.RenderTransform>
                                     <ContentPresenter Content="{TemplateBinding Tag}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -87,7 +88,9 @@
                             <MultiTrigger.EnterActions>
                                 <BeginStoryboard x:Name="RotateSB">
                                     <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="iconTranslate" Storyboard.TargetProperty="Y" To="-2" Duration="0:0:0.3" AutoReverse="True" RepeatBehavior="Forever"/>
+                                        <DoubleAnimation Storyboard.TargetName="iconRotate" Storyboard.TargetProperty="Angle"
+                                                         From="0" To="360" Duration="0:0:1.5"
+                                                         RepeatBehavior="Forever"/>
                                     </Storyboard>
                                 </BeginStoryboard>
                             </MultiTrigger.EnterActions>

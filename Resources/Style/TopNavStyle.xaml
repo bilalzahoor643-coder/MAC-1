@@ -5,47 +5,56 @@
 
     <!-- Top Nav Colors (White Theme) -->
     <SolidColorBrush x:Key="TopNavAccent" Color="#0077FF"/>
+    <SolidColorBrush x:Key="TopNavBg" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="TopNavBorder" Color="#E8E8E8"/>
+    <SolidColorBrush x:Key="TopNavIconIdle" Color="#888888"/>
+    <SolidColorBrush x:Key="TopNavIconHover" Color="#0077FF"/>
 
     <LinearGradientBrush x:Key="AddUrlGradient" StartPoint="0,0" EndPoint="1,1">
         <GradientStop Color="#0077FF" Offset="0"/>
         <GradientStop Color="#0055CC" Offset="1"/>
     </LinearGradientBrush>
 
-    <!-- 1. Modern Search Box (White Theme) -->
+    <!-- ===================== SEARCH BAR ===================== -->
     <Style x:Key="ModernSearchBox" TargetType="TextBox">
-        <Setter Property="Height" Value="35"/>
-        <Setter Property="Width" Value="200"/>
+        <Setter Property="Height" Value="38"/>
+        <Setter Property="Width" Value="300"/>
         <Setter Property="Background" Value="#F0F2F5"/>
         <Setter Property="Foreground" Value="#333"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="BorderBrush" Value="#DDD"/>
-        <Setter Property="Padding" Value="10,0"/>
+        <Setter Property="Padding" Value="14,0"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="hc:InfoElement.Placeholder" Value="Search Downloads..."/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="CaretBrush" Value="#0077FF"/>
+        <Setter Property="hc:InfoElement.Placeholder" Value="Search downloads..."/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
                     <Border x:Name="border" Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="17">
+                            CornerRadius="8">
+                        <Border.RenderTransform>
+                            <TranslateTransform x:Name="iconSlide" X="0"/>
+                        </Border.RenderTransform>
                         <Grid>
-                            <ScrollViewer x:Name="PART_ContentHost" Margin="5,0,30,0" VerticalAlignment="Center"/>
-                            <fa:ImageAwesome Icon="Search" Width="14" Foreground="#AAA"
-                                            HorizontalAlignment="Right" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                            <fa:ImageAwesome x:Name="searchIcon" Icon="Search" Width="14" Foreground="#AAA"
+                                            HorizontalAlignment="Left" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="34,0,12,0" VerticalAlignment="Center"/>
                         </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsFocused" Value="True">
-                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource TopNavAccent}"/>
-                            <Setter TargetName="border" Property="Background" Value="White"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="#0077FF"/>
+                            <Setter TargetName="border" Property="Background" Value="#FFFFFF"/>
+                            <Setter TargetName="searchIcon" Property="Foreground" Value="#0077FF"/>
                             <Trigger.EnterActions>
                                 <BeginStoryboard>
                                     <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetProperty="Width" To="300" Duration="0:0:0.3">
-                                            <DoubleAnimation.EasingFunction>
-                                                <QuadraticEase EasingMode="EaseOut"/>
-                                            </DoubleAnimation.EasingFunction>
+                                        <DoubleAnimation Storyboard.TargetName="searchIcon" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+                                                         From="0" To="4" Duration="0:0:0.2">
+                                            <DoubleAnimation.EasingFunction><QuadraticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
                                         </DoubleAnimation>
                                     </Storyboard>
                                 </BeginStoryboard>
@@ -53,7 +62,10 @@
                             <Trigger.ExitActions>
                                 <BeginStoryboard>
                                     <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetProperty="Width" To="200" Duration="0:0:0.3"/>
+                                        <DoubleAnimation Storyboard.TargetName="searchIcon" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+                                                         To="0" Duration="0:0:0.2">
+                                            <DoubleAnimation.EasingFunction><QuadraticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
                                     </Storyboard>
                                 </BeginStoryboard>
                             </Trigger.ExitActions>
@@ -64,36 +76,77 @@
         </Setter>
     </Style>
 
-    <!-- 2. Pulse Add URL Button (White Theme) -->
+    <!-- ===================== ADD NEW URL BUTTON ===================== -->
     <Style x:Key="PulseAddButtonStyle" TargetType="Button">
         <Setter Property="Background" Value="{StaticResource AddUrlGradient}"/>
         <Setter Property="Foreground" Value="White"/>
         <Setter Property="FontWeight" Value="Bold"/>
         <Setter Property="Height" Value="38"/>
-        <Setter Property="Padding" Value="20,0"/>
+        <Setter Property="FontSize" Value="12"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="19">
+                    <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="8">
                         <Border.RenderTransform>
-                            <ScaleTransform x:Name="btnScale" ScaleX="1" ScaleY="1" CenterX="50" CenterY="19"/>
+                            <ScaleTransform x:Name="btnScale" ScaleX="1" ScaleY="1"/>
                         </Border.RenderTransform>
-                        <StackPanel Orientation="Horizontal" Margin="15,0">
-                            <fa:ImageAwesome Icon="PlusCircle" Width="16" Foreground="White" Margin="0,0,10,0"/>
+                        <StackPanel Orientation="Horizontal" Margin="16,0">
+                            <fa:ImageAwesome x:Name="addIcon" Icon="PlusCircle" Width="14" Foreground="White" Margin="0,0,8,0" VerticalAlignment="Center"
+                                            RenderTransformOrigin="0.5,0.5">
+                                <fa:ImageAwesome.RenderTransform>
+                                    <RotateTransform x:Name="addIconRotate" Angle="0"/>
+                                </fa:ImageAwesome.RenderTransform>
+                            </fa:ImageAwesome>
                             <ContentPresenter VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <EventTrigger RoutedEvent="Loaded">
-                            <BeginStoryboard>
-                                <Storyboard RepeatBehavior="Forever">
-                                    <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleX" From="1" To="1.06" Duration="0:0:1" AutoReverse="True"/>
-                                    <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleY" From="1" To="1.06" Duration="0:0:1" AutoReverse="True"/>
-                                </Storyboard>
-                            </BeginStoryboard>
-                        </EventTrigger>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Opacity" Value="0.9"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleX"
+                                                         To="1.05" Duration="0:0:0.15">
+                                            <DoubleAnimation.EasingFunction><QuadraticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleY"
+                                                         To="1.05" Duration="0:0:0.15">
+                                            <DoubleAnimation.EasingFunction><QuadraticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="addIconRotate" Storyboard.TargetProperty="Angle"
+                                                         From="0" To="90" Duration="0:0:0.25">
+                                            <DoubleAnimation.EasingFunction><QuadraticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.12"/>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.12"/>
+                                        <DoubleAnimation Storyboard.TargetName="addIconRotate" Storyboard.TargetProperty="Angle" To="0" Duration="0:0:0.2"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleX" To="0.95" Duration="0:0:0.08"/>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleY" To="0.95" Duration="0:0:0.08"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.08"/>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.08"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -101,7 +154,186 @@
         </Setter>
     </Style>
 
-    <!-- 3. Top Action Buttons (White Theme) -->
+    <!-- ===================== PAUSE / RESUME TOGGLE BUTTON ===================== -->
+    <Style x:Key="PauseResumeButtonStyle" TargetType="Button">
+        <Setter Property="Height" Value="38"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="btnBorder" Background="#F5F6FA" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="8">
+                        <Border.RenderTransform>
+                            <ScaleTransform x:Name="btnScale" ScaleX="1" ScaleY="1"/>
+                        </Border.RenderTransform>
+                        <StackPanel x:Name="PauseContent" Orientation="Horizontal" Margin="16,0">
+                            <fa:ImageAwesome Icon="PauseCircle" Width="14" Foreground="#FF9800" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="PAUSE" Foreground="#555" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="12"/>
+                        </StackPanel>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="btnBorder" Property="Background" Value="#EAF0F8"/>
+                            <Setter TargetName="btnBorder" Property="BorderBrush" Value="#0077FF"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleX" To="1.05" Duration="0:0:0.15">
+                                            <DoubleAnimation.EasingFunction><QuadraticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleY" To="1.05" Duration="0:0:0.15">
+                                            <DoubleAnimation.EasingFunction><QuadraticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.12"/>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.12"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleX" To="0.95" Duration="0:0:0.08"/>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleY" To="0.95" Duration="0:0:0.08"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.08"/>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.08"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ===================== ICON-ONLY BUTTONS (Notification, Theme) ===================== -->
+    <Style x:Key="TopNavIconButtonStyle" TargetType="Button">
+        <Setter Property="Width" Value="38"/>
+        <Setter Property="Height" Value="38"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border" Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="8">
+                        <Border.RenderTransform>
+                            <ScaleTransform x:Name="btnScale" ScaleX="1" ScaleY="1"/>
+                        </Border.RenderTransform>
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="#F0F2F5"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="#E0E0E0"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleX" To="1.1" Duration="0:0:0.15">
+                                            <DoubleAnimation.EasingFunction><QuadraticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleY" To="1.1" Duration="0:0:0.15">
+                                            <DoubleAnimation.EasingFunction><QuadraticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.12"/>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.12"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleX" To="0.9" Duration="0:0:0.08"/>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleY" To="0.9" Duration="0:0:0.08"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.08"/>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.08"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ===================== SCHEDULER BUTTON (icon + text) ===================== -->
+    <Style x:Key="SchedulerButtonStyle" TargetType="Button">
+        <Setter Property="Height" Value="38"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="8">
+                        <Border.RenderTransform>
+                            <ScaleTransform x:Name="btnScale" ScaleX="1" ScaleY="1"/>
+                        </Border.RenderTransform>
+                        <StackPanel Orientation="Horizontal" Margin="12,0">
+                            <fa:ImageAwesome Icon="Calendar" Width="14" Foreground="#888" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="#F0F2F5"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="#E0E0E0"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleX" To="1.05" Duration="0:0:0.15"/>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleY" To="1.05" Duration="0:0:0.15"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.12"/>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.12"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ===================== OLD TopNavActionButtonStyle (kept for compatibility) ===================== -->
     <Style x:Key="TopNavActionButtonStyle" TargetType="Button">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="1"/>
@@ -132,58 +364,16 @@
                             <Trigger.EnterActions>
                                 <BeginStoryboard>
                                     <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="btnScale"
-                                                         Storyboard.TargetProperty="ScaleX"
-                                                         To="1.05" Duration="0:0:0.2">
-                                            <DoubleAnimation.EasingFunction>
-                                                <QuadraticEase EasingMode="EaseOut"/>
-                                            </DoubleAnimation.EasingFunction>
-                                        </DoubleAnimation>
-                                        <DoubleAnimation Storyboard.TargetName="btnScale"
-                                                         Storyboard.TargetProperty="ScaleY"
-                                                         To="1.05" Duration="0:0:0.2">
-                                            <DoubleAnimation.EasingFunction>
-                                                <QuadraticEase EasingMode="EaseOut"/>
-                                            </DoubleAnimation.EasingFunction>
-                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleX" To="1.05" Duration="0:0:0.2"/>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleY" To="1.05" Duration="0:0:0.2"/>
                                     </Storyboard>
                                 </BeginStoryboard>
                             </Trigger.EnterActions>
                             <Trigger.ExitActions>
                                 <BeginStoryboard>
                                     <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="btnScale"
-                                                         Storyboard.TargetProperty="ScaleX"
-                                                         To="1" Duration="0:0:0.15"/>
-                                        <DoubleAnimation Storyboard.TargetName="btnScale"
-                                                         Storyboard.TargetProperty="ScaleY"
-                                                         To="1" Duration="0:0:0.15"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </Trigger.ExitActions>
-                        </Trigger>
-                        <Trigger Property="IsPressed" Value="True">
-                            <Trigger.EnterActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="btnScale"
-                                                         Storyboard.TargetProperty="ScaleX"
-                                                         To="0.95" Duration="0:0:0.1"/>
-                                        <DoubleAnimation Storyboard.TargetName="btnScale"
-                                                         Storyboard.TargetProperty="ScaleY"
-                                                         To="0.95" Duration="0:0:0.1"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </Trigger.EnterActions>
-                            <Trigger.ExitActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="btnScale"
-                                                         Storyboard.TargetProperty="ScaleX"
-                                                         To="1" Duration="0:0:0.1"/>
-                                        <DoubleAnimation Storyboard.TargetName="btnScale"
-                                                         Storyboard.TargetProperty="ScaleY"
-                                                         To="1" Duration="0:0:0.1"/>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.15"/>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.15"/>
                                     </Storyboard>
                                 </BeginStoryboard>
                             </Trigger.ExitActions>

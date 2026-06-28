@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
 using MAC_1.ViewModels;
 
 namespace MAC_1.Models
@@ -9,6 +10,14 @@ namespace MAC_1.Models
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Url { get; set; } = string.Empty;
         public string SavePath { get; set; } = string.Empty;
+
+        // Cancellation token for pause/resume
+        private CancellationTokenSource? _cts;
+        public CancellationTokenSource? Cts
+        {
+            get => _cts;
+            set => _cts = value;
+        }
 
         // XAML Binding: Task.Filename
         private string _filename = string.Empty;

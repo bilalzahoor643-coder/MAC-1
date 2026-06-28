@@ -115,15 +115,66 @@
 
         <!-- 2. TOP NAVBAR (White Theme) -->
         <Border Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Background="#FFFFFF" BorderBrush="#E8E8E8" BorderThickness="0,0,0,1">
-            <Grid Margin="20,0">
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
-                    <Button Content="+ ADD NEW URL" Style="{StaticResource PulseAddButtonStyle}" Cursor="Hand"/>
-                    <Rectangle Width="40"/>
-                    <Button Content="RESUME ALL" Style="{StaticResource TopNavActionButtonStyle}"/>
-                    <Button Content="PAUSE ALL" Style="{StaticResource TopNavActionButtonStyle}"/>
-                    <Button Content="SCHEDULER" Style="{StaticResource TopNavActionButtonStyle}"/>
-                </StackPanel>
-                <TextBox Style="{StaticResource ModernSearchBox}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+            <Grid Margin="24,0">
+                <Grid.ColumnDefinitions>
+                    <!-- Search Bar -->
+                    <ColumnDefinition Width="Auto"/>
+                    <!-- Spacer -->
+                    <ColumnDefinition Width="20"/>
+                    <!-- Add New URL -->
+                    <ColumnDefinition Width="Auto"/>
+                    <!-- Spacer -->
+                    <ColumnDefinition Width="12"/>
+                    <!-- Pause / Resume -->
+                    <ColumnDefinition Width="Auto"/>
+                    <!-- Spacer -->
+                    <ColumnDefinition Width="12"/>
+                    <!-- Scheduler -->
+                    <ColumnDefinition Width="Auto"/>
+                    <!-- * pushes right icons -->
+                    <ColumnDefinition Width="*"/>
+                    <!-- Theme -->
+                    <ColumnDefinition Width="Auto"/>
+                    <!-- Notification (corner) -->
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Search Bar -->
+                <TextBox x:Name="SearchBox" Grid.Column="0" Style="{StaticResource ModernSearchBox}"
+                         VerticalAlignment="Center" GotFocus="SearchBox_GotFocus" LostFocus="SearchBox_LostFocus"/>
+
+                <!-- + Add New URL -->
+                <Button Grid.Column="2" Content="ADD NEW URL" Style="{StaticResource PulseAddButtonStyle}" Cursor="Hand" VerticalAlignment="Center"/>
+
+                <!-- Pause / Resume Toggle -->
+                <Button x:Name="PauseResumeBtn" Grid.Column="4" Style="{StaticResource PauseResumeButtonStyle}"
+                        Cursor="Hand" VerticalAlignment="Center" Click="PauseResumeBtn_Click"/>
+
+                <!-- Scheduler -->
+                <Button Grid.Column="6" Style="{StaticResource SchedulerButtonStyle}" Cursor="Hand" VerticalAlignment="Center"
+                        ToolTip="Scheduler">
+                    <ContentPresenter Content="Scheduler"/>
+                </Button>
+
+                <!-- Theme / Moon Icon (left side) -->
+                <Button Grid.Column="8" Style="{StaticResource TopNavIconButtonStyle}" VerticalAlignment="Center"
+                        ToolTip="Toggle Dark Theme">
+                    <Path Data="M12,3c-4.97,0 -9,4.03 -9,9s4.03,9 9,9 9,-4.03 9,-9c0,-0.46 -0.04,-0.92 -0.1,-1.36 -0.98,1.37 -2.58,2.26 -4.4,2.26 -2.98,0 -5.4,-2.42 -5.4,-5.4 0,-1.81 0.89,-3.42 2.26,-4.4C12.92,3.04 12.46,3 12,3z"
+                          Fill="#888" Width="16" Height="16" Stretch="Uniform"/>
+                </Button>
+
+                <!-- Notification Icon (corner) -->
+                <Button Grid.Column="9" Style="{StaticResource TopNavIconButtonStyle}" VerticalAlignment="Center"
+                        ToolTip="Notifications">
+                    <Grid>
+                        <Path Data="M12,22c1.1,0 2,-0.9 2,-2h-4c0,1.1 0.9,2 2,2zm6,-6v-5c0,-3.07 -1.63,-5.64 -4.5,-6.32V4c0,-0.83 -0.67,-1.5 -1.5,-1.5s-1.5,0.67 -1.5,1.5v0.68C7.64,5.36 6,7.92 6,11v5l-2,2v1h16v-1l-2,-2z"
+                              Fill="#888" Width="16" Height="16" Stretch="Uniform"/>
+                        <Border Width="14" Height="14" CornerRadius="7" Background="#FF3366" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                Margin="0,-4,-4,0">
+                            <TextBlock Text="2" Foreground="White" FontSize="8" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </Grid>
+                </Button>
             </Grid>
         </Border>
 

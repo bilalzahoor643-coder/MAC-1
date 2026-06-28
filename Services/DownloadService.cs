@@ -61,12 +61,13 @@ namespace MAC_1.Services
 
             // Naya task finalPath ke saath create karein
             var newTask = new DownloadTask(url, fileName, fileSize, finalPath);
+            newTask.Cts = new CancellationTokenSource();
             Downloads.Add(newTask);
 
-            _ = StartDownloadAsync(newTask);
+            _ = StartDownloadAsync(newTask, newTask.Cts.Token);
         }
 
-        public async Task StartDownloadAsync(DownloadTask task)
+        public async Task StartDownloadAsync(DownloadTask task, CancellationToken token = default)
         {
             try
             {
@@ -87,19 +88,19 @@ namespace MAC_1.Services
                 // Full path for file stream
                 string fullFilePath = Path.Combine(task.SavePath!, task.Filename!);
 
-                using var response = await _httpClient.GetAsync(task.Url, HttpCompletionOption.ResponseHeadersRead);
+                using var response = await _httpClient.GetAsync(task.Url, HttpCompletionOption.ResponseHeadersRead, token);
                 response.EnsureSuccessStatusCode();
 
-                using var contentStream = await response.Content.ReadAsStreamAsync();
+                using var contentStream = await response.Content.ReadAsStreamAsync(token);
                 using var fileStream = new FileStream(fullFilePath, FileMode.Create, FileAccess.Write, FileShare.None, 16384, true);
 
                 var buffer = new byte[16384];
                 long totalRead = 0;
                 int read;
 
-                while ((read = await contentStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                while ((read = await contentStream.ReadAsync(buffer, 0, buffer.Length, token)) > 0)
                 {
-                    await fileStream.WriteAsync(buffer, 0, read);
+                    await fileStream.WriteAsync(buffer, 0, read, token);
                     totalRead += read;
 
                     task.DownloadedSize = totalRead;
@@ -112,10 +113,38 @@ namespace MAC_1.Services
                 task.State = "Completed";
                 task.Progress = 100;
             }
+            catch (OperationCanceledException)
+            {
+                task.State = "Paused";
+            }
             catch (Exception ex)
             {
                 task.State = "Error";
                 task.ErrorMessage = ex.Message;
+            }
+        }
+
+        public void PauseAll()
+        {
+            foreach (var task in Downloads)
+            {
+                if (task.State == "Downloading..." || task.State == "Connecting...")
+                {
+                    task.Cts?.Cancel();
+                    task.State = "Paused";
+                }
+            }
+        }
+
+        public void ResumeAll()
+        {
+            foreach (var task in Downloads)
+            {
+                if (task.State == "Paused")
+                {
+                    task.Cts = new CancellationTokenSource();
+                    _ = StartDownloadAsync(task, task.Cts.Token);
+                }
             }
         }
     }
