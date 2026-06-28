@@ -1,0 +1,28 @@
+<UserControl x:Class="MAC_1.Views.EmptyStateSection"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:fa="http://schemas.fontawesome.io/icons/">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Page Title -->
+        <TextBlock x:Name="PageTitle" Grid.Row="0" FontSize="26" FontWeight="Bold"
+                   Foreground="#1A1A2E" Margin="32,24,32,0"/>
+
+        <!-- Empty State -->
+        <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,-40,0,0">
+            <Border Width="100" Height="100" CornerRadius="50" Background="#F3F4F6" HorizontalAlignment="Center">
+                <fa:ImageAwesome x:Name="EmptyIcon" Icon="CloudDownload" Width="44" Foreground="#D1D5DB"
+                                VerticalAlignment="Center" HorizontalAlignment="Center"/>
+            </Border>
+            <TextBlock x:Name="EmptyTitle" Text="No Downloads Yet" FontSize="18" FontWeight="SemiBold"
+                       Foreground="#6B7280" HorizontalAlignment="Center" Margin="0,20,0,0"/>
+            <TextBlock x:Name="EmptySubtitle" Text="Click + ADD NEW URL to start downloading"
+                       FontSize="13" Foreground="#9CA3AF" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

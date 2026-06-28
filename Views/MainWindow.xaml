@@ -73,39 +73,39 @@
                 <!-- SEPARATOR LINE -->
                 <Border Grid.Row="1" Height="1" Background="#E0E0E0" VerticalAlignment="Top" Margin="16,0"/>
 
-                <Button Grid.Row="1" Style="{StaticResource SidebarButtonStyle}" Content="Dashboard">
+                <Button x:Name="NavDashboard" Grid.Row="1" Style="{StaticResource SidebarButtonStyle}" Content="Dashboard" Click="NavButton_Click">
                     <Button.Tag>
                         <fa:ImageAwesome Icon="Dashboard" Width="20" Foreground="#0077FF"/>
                     </Button.Tag>
                 </Button>
                 <hc:Badge Grid.Row="2" Value="3" BadgeMargin="0,15,15,0">
-                    <Button Style="{StaticResource SidebarButtonStyle}" Content="Downloading">
+                    <Button x:Name="NavDownloading" Style="{StaticResource SidebarButtonStyle}" Content="Downloading" Click="NavButton_Click">
                         <Button.Tag>
                             <fa:ImageAwesome Icon="Download" Width="20" Foreground="#0077FF"/>
                         </Button.Tag>
                     </Button>
                 </hc:Badge>
-                <Button Grid.Row="3" Style="{StaticResource SidebarButtonStyle}" Content="Queue">
+                <Button x:Name="NavQueue" Grid.Row="3" Style="{StaticResource SidebarButtonStyle}" Content="Queue" Click="NavButton_Click">
                     <Button.Tag>
                         <fa:ImageAwesome Icon="ListOl" Width="20" Foreground="#0077FF"/>
                     </Button.Tag>
                 </Button>
-                <Button Grid.Row="4" Style="{StaticResource SidebarButtonStyle}" Content="Torrent">
+                <Button x:Name="NavTorrent" Grid.Row="4" Style="{StaticResource SidebarButtonStyle}" Content="Torrent" Click="NavButton_Click">
                     <Button.Tag>
                         <fa:ImageAwesome Icon="Magnet" Width="20" Foreground="#0077FF"/>
                     </Button.Tag>
                 </Button>
-                <Button Grid.Row="5" Style="{StaticResource SidebarButtonStyle}" Content="Finished">
+                <Button x:Name="NavFinished" Grid.Row="5" Style="{StaticResource SidebarButtonStyle}" Content="Finished" Click="NavButton_Click">
                     <Button.Tag>
                         <fa:ImageAwesome Icon="CheckCircle" Width="20" Foreground="#0077FF"/>
                     </Button.Tag>
                 </Button>
-                <Button Grid.Row="6" Style="{StaticResource SidebarButtonStyle}" Content="History">
+                <Button x:Name="NavHistory" Grid.Row="6" Style="{StaticResource SidebarButtonStyle}" Content="History" Click="NavButton_Click">
                     <Button.Tag>
                         <fa:ImageAwesome Icon="History" Width="20" Foreground="#0077FF"/>
                     </Button.Tag>
                 </Button>
-                <Button Grid.Row="8" Style="{StaticResource SidebarButtonStyle}" Content="Settings" ToolTip="Rotate">
+                <Button x:Name="NavSettings" Grid.Row="8" Style="{StaticResource SidebarButtonStyle}" Content="Settings" ToolTip="Rotate" Click="NavButton_Click">
                     <Button.Tag>
                         <fa:ImageAwesome Icon="Gear" Width="20" Foreground="#0077FF"/>
                     </Button.Tag>
@@ -178,8 +178,10 @@
             </Grid>
         </Border>
 
-        <!-- 3. MAIN DOWNLOAD AREA (White Background) -->
-        <Border Grid.Row="1" Grid.Column="1" BorderBrush="#E8E8E8" BorderThickness="0,0,1,0" Background="White"/>
+        <!-- 3. MAIN DOWNLOAD AREA (Content Host) -->
+        <Border Grid.Row="1" Grid.Column="1" BorderBrush="#E8E8E8" BorderThickness="0,0,1,0" Background="White">
+            <ContentControl x:Name="MainContent" Margin="0"/>
+        </Border>
 
         <!-- 4. RIGHT PANEL (Empty - content later) -->
         <Border Grid.Row="1" Grid.Column="2" Background="#FFFFFF" BorderBrush="#E8E8E8" BorderThickness="0,0,1,0"/>

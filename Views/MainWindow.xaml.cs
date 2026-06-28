@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -10,10 +11,12 @@ namespace MAC_1.Views
     {
         private bool _isSidebarExpanded = true;
         private bool _isPaused = false;
+        private Button? _activeNavButton;
 
         public MainWindow()
         {
             InitializeComponent();
+            NavigateTo(NavDashboard);
         }
 
         // --- Sidebar ---
@@ -43,6 +46,56 @@ namespace MAC_1.Views
             double textOpacity = _isSidebarExpanded ? 1 : 0;
             var textAnim = new DoubleAnimation(textOpacity, TimeSpan.FromMilliseconds(0.25));
             LogoTextPanel.BeginAnimation(OpacityProperty, textAnim);
+        }
+
+        // --- Navigation ---
+        private void NavButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn)
+            {
+                NavigateTo(btn);
+            }
+        }
+
+        private void NavigateTo(Button navButton)
+        {
+            _activeNavButton = navButton;
+            string page = navButton.Content.ToString() ?? "";
+
+            switch (page)
+            {
+                case "Dashboard":
+                    MainContent.Content = new DashboardSection();
+                    break;
+                case "Downloading":
+                    ShowEmptyPage("Downloading", "No Active Downloads", "Your downloads will appear here", FontAwesomeIcon.Download);
+                    break;
+                case "Queue":
+                    ShowEmptyPage("Queue", "Queue is Empty", "Add downloads to the queue to start", FontAwesomeIcon.ListOl);
+                    break;
+                case "Torrent":
+                    ShowEmptyPage("Torrent", "No Torrents", "Add a magnet link or torrent file to begin", FontAwesomeIcon.Magnet);
+                    break;
+                case "Finished":
+                    ShowEmptyPage("Finished", "No Completed Downloads", "Finished downloads will show up here", FontAwesomeIcon.CheckCircle);
+                    break;
+                case "History":
+                    ShowEmptyPage("History", "No History Yet", "Your download history will appear here", FontAwesomeIcon.History);
+                    break;
+                case "Settings":
+                    ShowEmptyPage("Settings", "Settings", "Configure your MAC-1 Downloader", FontAwesomeIcon.Gear);
+                    break;
+                default:
+                    MainContent.Content = new DashboardSection();
+                    break;
+            }
+        }
+
+        private void ShowEmptyPage(string title, string emptyTitle, string emptySubtitle, FontAwesomeIcon icon)
+        {
+            var empty = new EmptyStateSection();
+            empty.SetPage(title, emptyTitle, emptySubtitle, icon);
+            MainContent.Content = empty;
         }
 
         // --- Search Bar ---

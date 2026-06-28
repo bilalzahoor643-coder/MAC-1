@@ -5,5 +5,6 @@
         <ResourceDictionary Source="TopNavStyle.xaml"/>
         <ResourceDictionary Source="RightPanelStyle.xaml"/>
         <ResourceDictionary Source="BottomNavStyle.xaml"/>
+        <ResourceDictionary Source="DashboardStyle.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 </ResourceDictionary>
