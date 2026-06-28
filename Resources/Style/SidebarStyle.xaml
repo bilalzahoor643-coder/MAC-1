@@ -1,0 +1,121 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:hc="https://handyorg.github.io/handycontrol"
+                    xmlns:fa="http://schemas.fontawesome.io/icons/">
+
+    <SolidColorBrush x:Key="SidebarAccent" Color="#0077FF"/>
+    <SolidColorBrush x:Key="SidebarTextPrimary" Color="#1A1A2E"/>
+    <SolidColorBrush x:Key="SidebarHoverBg" Color="#D6E4F0"/>
+
+    <Style x:Key="LogoStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="20"/>
+        <Setter Property="FontWeight" Value="Black"/>
+        <Setter Property="Foreground" Value="#1A1A2E"/>
+    </Style>
+
+    <Style x:Key="SidebarButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Foreground" Value="#555555"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="0,12,12,0" Margin="0,2,10,2">
+                        <Border.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform x:Name="btnScale" ScaleX="1" ScaleY="1"/>
+                            </TransformGroup>
+                        </Border.RenderTransform>
+                        <Grid>
+                            <Border x:Name="AccentBar" Background="{StaticResource SidebarAccent}" Width="4" HorizontalAlignment="Left" Opacity="0" CornerRadius="0,4,4,0"/>
+
+                            <StackPanel x:Name="ExpandedContent" Orientation="Horizontal" Margin="18,8" VerticalAlignment="Center">
+                                <Grid Width="22" Height="22" Margin="0,0,14,0" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                    <Grid.RenderTransform>
+                                        <TransformGroup>
+                                            <TranslateTransform x:Name="iconTranslate" Y="0"/>
+                                        </TransformGroup>
+                                    </Grid.RenderTransform>
+                                    <ContentPresenter Content="{TemplateBinding Tag}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Grid>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="MainText" Text="{TemplateBinding Content}" FontSize="14" FontWeight="SemiBold" Foreground="{TemplateBinding Foreground}">
+                                        <TextBlock.RenderTransform>
+                                            <TranslateTransform x:Name="textTranslate" Y="0"/>
+                                        </TextBlock.RenderTransform>
+                                    </TextBlock>
+                                    <TextBlock x:Name="SubText" Text="Status: Idle" FontSize="9" Foreground="#AAAAAA" Opacity="0.7"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource SidebarHoverBg}"/>
+                            <Setter Property="Foreground" Value="{StaticResource SidebarTextPrimary}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard x:Name="HoverSB">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="AccentBar" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.3"/>
+                                        <DoubleAnimation Storyboard.TargetName="iconTranslate" Storyboard.TargetProperty="Y" To="-3" Duration="0:0:0.35" AutoReverse="True">
+                                            <DoubleAnimation.EasingFunction><SineEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="textTranslate" Storyboard.TargetProperty="Y" To="-1" Duration="0:0:0.3">
+                                            <DoubleAnimation.EasingFunction><SineEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard x:Name="HoverExitSB">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="AccentBar" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.25"/>
+                                        <DoubleAnimation Storyboard.TargetName="iconTranslate" Storyboard.TargetProperty="Y" To="0" Duration="0:0:0.25"/>
+                                        <DoubleAnimation Storyboard.TargetName="textTranslate" Storyboard.TargetProperty="Y" To="0" Duration="0:0:0.25"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="ToolTip" Value="Rotate">
+                            <Setter TargetName="SubText" Property="Text" Value="Configure App"/>
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="ToolTip" Value="Rotate"/>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                            </MultiTrigger.Conditions>
+                            <MultiTrigger.EnterActions>
+                                <BeginStoryboard x:Name="RotateSB">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="iconTranslate" Storyboard.TargetProperty="Y" To="-2" Duration="0:0:0.3" AutoReverse="True" RepeatBehavior="Forever"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </MultiTrigger.EnterActions>
+                            <MultiTrigger.ExitActions>
+                                <StopStoryboard BeginStoryboardName="RotateSB"/>
+                            </MultiTrigger.ExitActions>
+                        </MultiTrigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleX" To="0.97" Duration="0:0:0.1"/>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleY" To="0.97" Duration="0:0:0.1"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.15"/>
+                                        <DoubleAnimation Storyboard.TargetName="btnScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.15"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

@@ -1,0 +1,114 @@
+﻿<Window x:Class="MAC_1.Views.ExtensionPopup"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:hc="https://handyorg.github.io/handycontrol"
+        xmlns:fa="http://schemas.fontawesome.io/icons/"
+        Title="New Download" Height="500" Width="600"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        WindowStartupLocation="CenterScreen" ShowInTaskbar="False" Topmost="True">
+
+    <Border Background="#FFFFFF" CornerRadius="20" BorderBrush="#E0E0E0" BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="20" ShadowDepth="5" Opacity="0.2" Color="#000000"/>
+        </Border.Effect>
+        <Grid Margin="25">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <!-- Header -->
+                <RowDefinition Height="Auto"/>
+                <!-- Icon/Name -->
+                <RowDefinition Height="*"/>
+                <!-- Fields -->
+                <RowDefinition Height="Auto"/>
+                <!-- Buttons -->
+            </Grid.RowDefinitions>
+
+            <!-- 0. HEADER -->
+            <DockPanel Grid.Row="0" Margin="0,0,0,20">
+                <TextBlock Text="DOWNLOAD INTERCEPTED" Foreground="#0077FF" FontSize="10" FontWeight="Black"/>
+                <Button Content="X" HorizontalAlignment="Right" Background="Transparent" BorderThickness="0" 
+                        Foreground="#AAA" FontSize="14" Cursor="Hand" Click="Close_Click"/>
+            </DockPanel>
+
+            <!-- 1. FILE INFO -->
+            <Grid Grid.Row="1" Margin="0,0,0,25">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Border Width="70" Height="70" Background="#F0F2F5" CornerRadius="15">
+                    <fa:ImageAwesome x:Name="FileIcon" Icon="FileOutline" Width="35" Foreground="#0077FF"/>
+                </Border>
+                <StackPanel Grid.Column="1" Margin="20,0,0,0" VerticalAlignment="Center">
+                    <TextBlock x:Name="FileNameText" Text="master.zip" Foreground="#1A1A2E" FontSize="18" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock x:Name="FileInfoText" Text="Size: Unknown | Type: Compressed" Foreground="#888" FontSize="12" Margin="0,5,0,0"/>
+                    <TextBlock x:Name="WebsiteText" Text="Source: github.com" Foreground="#0077FF" FontSize="11" Margin="0,3,0,0"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- 2. EDITABLE FIELDS -->
+            <StackPanel Grid.Row="2">
+                <!-- SOURCE URL (Editable + Copy) -->
+                <TextBlock Text="SOURCE URL" Foreground="#AAA" FontSize="9" Margin="5,0,0,5"/>
+                <Grid Margin="0,0,0,15">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="UrlTextBox" IsEnabled="True" IsReadOnly="False" Style="{StaticResource PopupInputStyle}" />
+                    <Button Grid.Column="1" Style="{StaticResource PopupSecondaryBtn}" Margin="10,0,0,0" Width="40" Click="CopyUrl_Click">
+                        <fa:ImageAwesome Icon="Copy" Width="14" Foreground="White"/>
+                    </Button>
+                </Grid>
+
+                <!-- SAVE PATH (Editable + Browse) -->
+                <TextBlock Text="SAVE PATH" Foreground="#AAA" FontSize="9" Margin="5,0,0,5"/>
+                <Grid Margin="0,0,0,15">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="SavePathTextBox" Text="C:\Downloads\" Style="{StaticResource PopupInputStyle}"/>
+                    <Button Grid.Column="1" Style="{StaticResource PopupSecondaryBtn}" Margin="10,0,0,0" Width="40" Click="BrowseFolder_Click">
+                        <fa:ImageAwesome Icon="FolderOpen" Width="14" Foreground="White"/>
+                    </Button>
+                </Grid>
+
+                <!-- THREADS & PRIORITY ROW -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                        <TextBlock Text="THREADS" Foreground="#AAA" FontSize="9" Margin="5,0,0,5"/>
+                        <ComboBox x:Name="ThreadComboBox" Height="32" SelectedIndex="1">
+                            <ComboBoxItem Content="16 Threads"/>
+                            <ComboBoxItem Content="32 Threads"/>
+                            <ComboBoxItem Content="64 Threads"/>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                        <TextBlock Text="PRIORITY" Foreground="#AAA" FontSize="9" Margin="5,0,0,5"/>
+                        <ComboBox x:Name="PriorityComboBox" Height="32" SelectedIndex="1">
+                            <ComboBoxItem Content="High"/>
+                            <ComboBoxItem Content="Normal"/>
+                            <ComboBoxItem Content="Low"/>
+                        </ComboBox>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+
+            <!-- 3. ACTION BUTTONS -->
+            <Grid Grid.Row="3" Margin="0,25,0,0">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                    <Button Content="CANCEL" Style="{StaticResource PopupSecondaryBtn}" Width="80" Click="Close_Click"/>
+                    <Button Content="SCHEDULE" Style="{StaticResource PopupSecondaryBtn}" Width="90" Margin="10,0"/>
+                </StackPanel>
+                <Button Content="DOWNLOAD NOW" Style="{StaticResource PopupPrimaryBtn}" HorizontalAlignment="Right" Click="DownloadNow_Click"/>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

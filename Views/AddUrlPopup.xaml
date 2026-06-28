@@ -1,0 +1,96 @@
+﻿<Window x:Class="MAC_1.Views.AddUrlPopup"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:hc="https://handyorg.github.io/handycontrol"
+        xmlns:fa="http://schemas.fontawesome.io/icons/"
+        Title="Add URL" Height="160" Width="580" x:Name="ManualAddWin"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        MouseDown="Window_MouseDown">
+
+    <Border Background="#FFFFFF" CornerRadius="20" BorderBrush="#E0E0E0" BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="20" ShadowDepth="5" Opacity="0.2" Color="#000000"/>
+        </Border.Effect>
+        <Grid Margin="25,20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <!-- 0. Header -->
+                <RowDefinition Height="Auto"/>
+                <!-- 1. Content Area (Fixed to Auto to remove gap) -->
+                <RowDefinition Height="Auto"/>
+                <!-- 2. Footer -->
+            </Grid.RowDefinitions>
+
+            <!-- 0. HEADER -->
+            <DockPanel Grid.Row="0" Margin="0,0,0,15">
+                <TextBlock Text="ADD MANUAL DOWNLOAD" Foreground="#0077FF" FontSize="9" FontWeight="Black" VerticalAlignment="Center"/>
+                <Button Content="X" HorizontalAlignment="Right" Background="Transparent" BorderThickness="0" 
+                        Foreground="#AAA" FontSize="14" Cursor="Hand" Click="Cancel_Click"/>
+            </DockPanel>
+
+            <!-- 1. CONTENT AREA -->
+            <Grid Grid.Row="1">
+                <Grid x:Name="InputPanel" Visibility="Visible" VerticalAlignment="Center" Margin="0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="UrlTextBox" Style="{StaticResource CompactUrlStyle}" Margin="0,0,10,0"/>
+                    <Button Grid.Column="1" Content="ANALYZE" Style="{StaticResource PopupPrimaryBtn}" Width="110" Click="Analyze_Click"/>
+                </Grid>
+
+                <StackPanel x:Name="ResultPanel" Visibility="Collapsed">
+                    <Grid Margin="0,0,0,15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Width="60" Height="60" Background="#F0F2F5" CornerRadius="12">
+                            <fa:ImageAwesome Icon="FileZipOutline" Width="28" Foreground="#0077FF"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" Margin="15,0,0,0" VerticalAlignment="Center">
+                            <TextBlock x:Name="FileNameLabel" Text="Manual_Download_Package.rar" Foreground="#1A1A2E" FontSize="16" FontWeight="Bold"/>
+                            <TextBlock x:Name="FileSizeLabel" Text="Size: 1.25 GB | Type: Archive" Foreground="#888" FontSize="11" Margin="0,3,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Text="SAVE PATH" Foreground="#AAA" FontSize="8" Margin="5,0,0,3"/>
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Text="C:\Users\Downloads\MAC_1\" Style="{StaticResource PopupInputStyle}"/>
+                        <Button Grid.Column="1" Style="{StaticResource PopupSecondaryBtn}" Margin="10,0,0,0" Width="35">
+                            <fa:ImageAwesome Icon="FolderOpen" Width="12" Foreground="White"/>
+                        </Button>
+                    </Grid>
+                    <UniformGrid Columns="2">
+                        <StackPanel Margin="0,0,10,0">
+                            <TextBlock Text="THREADS" Foreground="#AAA" FontSize="8" Margin="5,0,0,3"/>
+                            <ComboBox Height="30" SelectedIndex="1">
+                                <ComboBoxItem Content="16 Threads"/>
+                                <ComboBoxItem Content="32 Threads"/>
+                                <ComboBoxItem Content="64 Threads"/>
+                            </ComboBox>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="PRIORITY" Foreground="#AAA" FontSize="8" Margin="5,0,0,3"/>
+                            <ComboBox Height="30" SelectedIndex="1">
+                                <ComboBoxItem Content="High"/>
+                                <ComboBoxItem Content="Normal"/>
+                                <ComboBoxItem Content="Low"/>
+                            </ComboBox>
+                        </StackPanel>
+                    </UniformGrid>
+                </StackPanel>
+            </Grid>
+
+            <!-- 2. FOOTER (Reduced Top Margin) -->
+            <Grid x:Name="FooterPanel" Grid.Row="2" Margin="0,15,0,0" Visibility="Collapsed">
+                <Button Content="CANCEL" Style="{StaticResource PopupSecondaryBtn}" Width="80" Click="Cancel_Click" HorizontalAlignment="Left"/>
+                <Button x:Name="DownloadBtn" Content="DOWNLOAD NOW" Style="{StaticResource PopupPrimaryBtn}" HorizontalAlignment="Right"/>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

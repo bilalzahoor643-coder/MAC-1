@@ -1,0 +1,30 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:hc="https://handyorg.github.io/handycontrol">
+
+    <!-- Style for the Meter Title (White Theme) -->
+    <Style x:Key="MeterTitleStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="#888888"/>
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="0,0,0,10"/>
+    </Style>
+
+    <!-- Standard Gauge Style (White Theme) -->
+    <Style x:Key="StableCircularStyle" TargetType="ProgressBar">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ProgressBar">
+                    <Grid>
+                        <Ellipse VerticalAlignment="Center" HorizontalAlignment="Center" Width="40" Height="40" Opacity="0.1" Fill="#0077FF"/>
+                        <hc:Arc StrokeThickness="8" Stroke="#E8E8E8" StartAngle="0" EndAngle="360"/>
+                        <hc:Arc x:Name="PART_Indicator" StrokeThickness="8" Stroke="{TemplateBinding Foreground}" StartAngle="0" EndAngle="280"/>
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>
