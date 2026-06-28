@@ -19,36 +19,24 @@ namespace MAC_1.Views
             NavigateTo(NavDashboard);
         }
 
-        // --- Sidebar ---
         private void LogoArea_MouseEnter(object sender, MouseEventArgs e)
         {
-            var anim = new DoubleAnimation(1, TimeSpan.FromMilliseconds(0.2));
-            CollapseOverlay.BeginAnimation(OpacityProperty, anim);
+            CollapseOverlay.BeginAnimation(OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(0.2)));
         }
 
         private void LogoArea_MouseLeave(object sender, MouseEventArgs e)
         {
-            var anim = new DoubleAnimation(0, TimeSpan.FromMilliseconds(0.3));
-            CollapseOverlay.BeginAnimation(OpacityProperty, anim);
+            CollapseOverlay.BeginAnimation(OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(0.3)));
         }
 
         private void CollapseBtn_Click(object sender, RoutedEventArgs e)
         {
             _isSidebarExpanded = !_isSidebarExpanded;
-
             double toWidth = _isSidebarExpanded ? 220 : 70;
-            var widthAnim = new DoubleAnimation(toWidth, TimeSpan.FromMilliseconds(0.3))
-            {
-                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseInOut }
-            };
-            SidebarBorder.BeginAnimation(WidthProperty, widthAnim);
-
-            double textOpacity = _isSidebarExpanded ? 1 : 0;
-            var textAnim = new DoubleAnimation(textOpacity, TimeSpan.FromMilliseconds(0.25));
-            LogoTextPanel.BeginAnimation(OpacityProperty, textAnim);
+            SidebarBorder.BeginAnimation(WidthProperty, new DoubleAnimation(toWidth, TimeSpan.FromMilliseconds(0.3)));
+            LogoTextPanel.BeginAnimation(OpacityProperty, new DoubleAnimation(_isSidebarExpanded ? 1 : 0, TimeSpan.FromMilliseconds(0.25)));
         }
 
-        // --- Navigation ---
         private void NavButton_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button btn)
@@ -59,7 +47,21 @@ namespace MAC_1.Views
 
         private void NavigateTo(Button navButton)
         {
+            // Reset previous button
+            if (_activeNavButton != null)
+            {
+                _activeNavButton.Background = Brushes.Transparent;
+                var prevIcon = _activeNavButton.Tag as ImageAwesome;
+                if (prevIcon != null) prevIcon.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0077FF"));
+            }
+
             _activeNavButton = navButton;
+
+            // Highlight active button
+            navButton.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#D6E4F0"));
+            var activeIcon = navButton.Tag as ImageAwesome;
+            if (activeIcon != null) activeIcon.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0055CC"));
+
             string page = navButton.Content.ToString() ?? "";
 
             switch (page)
@@ -68,7 +70,7 @@ namespace MAC_1.Views
                     MainContent.Content = new DashboardSection();
                     break;
                 case "Downloading":
-                    ShowEmptyPage("Downloading", "No Active Downloads", "Your downloads will appear here", FontAwesomeIcon.Download);
+                    MainContent.Content = new DownloadingSection();
                     break;
                 case "Queue":
                     ShowEmptyPage("Queue", "Queue is Empty", "Add downloads to the queue to start", FontAwesomeIcon.ListOl);
@@ -98,35 +100,24 @@ namespace MAC_1.Views
             MainContent.Content = empty;
         }
 
-        // --- Search Bar ---
         private void SearchBox_GotFocus(object sender, RoutedEventArgs e)
         {
-            var anim = new DoubleAnimation(300, 420, TimeSpan.FromMilliseconds(0.25))
-            {
-                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
-            };
-            SearchBox.BeginAnimation(WidthProperty, anim);
+            SearchBox.BeginAnimation(WidthProperty, new DoubleAnimation(300, 420, TimeSpan.FromMilliseconds(0.25)));
         }
 
         private void SearchBox_LostFocus(object sender, RoutedEventArgs e)
         {
-            var anim = new DoubleAnimation(420, 300, TimeSpan.FromMilliseconds(0.25))
-            {
-                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
-            };
-            SearchBox.BeginAnimation(WidthProperty, anim);
+            SearchBox.BeginAnimation(WidthProperty, new DoubleAnimation(420, 300, TimeSpan.FromMilliseconds(0.25)));
         }
 
-        // --- Pause / Resume ---
         private void PauseResumeBtn_Click(object sender, RoutedEventArgs e)
         {
             _isPaused = !_isPaused;
-
-            var pauseContent = PauseResumeBtn.Template.FindName("PauseContent", PauseResumeBtn) as System.Windows.Controls.StackPanel;
+            var pauseContent = PauseResumeBtn.Template.FindName("PauseContent", PauseResumeBtn) as StackPanel;
             if (pauseContent == null) return;
 
             var icon = pauseContent.Children[0] as ImageAwesome;
-            var label = pauseContent.Children[1] as System.Windows.Controls.TextBlock;
+            var label = pauseContent.Children[1] as TextBlock;
             if (icon == null || label == null) return;
 
             if (_isPaused)
@@ -134,7 +125,6 @@ namespace MAC_1.Views
                 icon.Icon = FontAwesomeIcon.PlayCircle;
                 icon.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#4CAF50"));
                 label.Text = "RESUME";
-
                 Services.DownloadService.Instance.PauseAll();
             }
             else
@@ -142,7 +132,6 @@ namespace MAC_1.Views
                 icon.Icon = FontAwesomeIcon.PauseCircle;
                 icon.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF9800"));
                 label.Text = "PAUSE";
-
                 Services.DownloadService.Instance.ResumeAll();
             }
         }

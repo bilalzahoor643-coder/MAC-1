@@ -47,7 +47,7 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Border Width="60" Height="60" Background="#F0F2F5" CornerRadius="12">
-                            <fa:ImageAwesome Icon="FileZipOutline" Width="28" Foreground="#0077FF"/>
+                            <fa:ImageAwesome Icon="Archive" Width="28" Foreground="#0077FF"/>
                         </Border>
                         <StackPanel Grid.Column="1" Margin="15,0,0,0" VerticalAlignment="Center">
                             <TextBlock x:Name="FileNameLabel" Text="Manual_Download_Package.rar" Foreground="#1A1A2E" FontSize="16" FontWeight="Bold"/>

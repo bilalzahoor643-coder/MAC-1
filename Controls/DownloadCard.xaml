@@ -83,7 +83,7 @@
             Cursor="Hand"
             Click="DotsButton_Click">
                             <!-- Code-behind mein chota sa trigger chahiye hoga -->
-                            <fa:ImageAwesome Icon="EllipsisV" Width="6" Foreground="#AAA"/>
+                            <fa:ImageAwesome Icon="EllipsisH" Width="6" Foreground="#AAA"/>
                         </Button>
 
                         <!-- THE POPUP (Windows Desktop Style Menu) -->

@@ -3,10 +3,12 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:MAC_1"
+        xmlns:fa="http://schemas.fontawesome.io/icons/"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="MAC-1 Downloader" Height="700" Width="1100"
+        WindowStartupLocation="CenterScreen"
+        Background="#F0F2F5">
     <Grid>
-
+        <TextBlock Text="Loading..." HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="20"/>
     </Grid>
 </Window>
