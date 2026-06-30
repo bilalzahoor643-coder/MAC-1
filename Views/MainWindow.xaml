@@ -144,7 +144,7 @@
                          VerticalAlignment="Center" GotFocus="SearchBox_GotFocus" LostFocus="SearchBox_LostFocus"/>
 
                 <!-- + Add New URL -->
-                <Button Grid.Column="2" Content="ADD NEW URL" Style="{StaticResource PulseAddButtonStyle}" Cursor="Hand" VerticalAlignment="Center"/>
+                <Button Grid.Column="2" Content="ADD NEW URL" Style="{StaticResource PulseAddButtonStyle}" Cursor="Hand" VerticalAlignment="Center" Click="AddNewUrl_Click"/>
 
                 <!-- Pause / Resume Toggle -->
                 <Button x:Name="PauseResumeBtn" Grid.Column="4" Style="{StaticResource PauseResumeButtonStyle}"

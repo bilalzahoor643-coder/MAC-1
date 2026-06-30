@@ -135,5 +135,11 @@ namespace MAC_1.Views
                 Services.DownloadService.Instance.ResumeAll();
             }
         }
+
+        private void AddNewUrl_Click(object sender, RoutedEventArgs e)
+        {
+            var popup = new DownloadPopup();
+            popup.Show();
+        }
     }
 }

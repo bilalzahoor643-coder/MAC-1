@@ -1,0 +1,711 @@
+<Window x:Class="MAC_1.Views.DownloadPopup"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:fa="http://schemas.fontawesome.io/icons/"
+        Title="MAC-1 Download" Height="440" Width="780"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        WindowStartupLocation="CenterScreen" ShowInTaskbar="True"
+        ResizeMode="NoResize">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Resources/Style/DownloadPopupStyle.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <Storyboard x:Key="RotateRingAnimation" RepeatBehavior="Forever">
+                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                               From="0" To="360" Duration="0:0:3"/>
+            </Storyboard>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Border Background="{StaticResource AppBg}" CornerRadius="12" BorderBrush="{StaticResource CardBorder}" BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="36" ShadowDepth="8" Opacity="0.14" Color="#111827"/>
+        </Border.Effect>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="44"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- TITLE BAR -->
+            <Border Grid.Row="0" Background="{StaticResource TitleBarBg}" CornerRadius="12,12,0,0" MouseLeftButtonDown="Window_MouseLeftButtonDown">
+                <Grid Margin="18,0,10,0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Width="28" Height="28" CornerRadius="7" Background="{StaticResource AccentSoft}" Margin="0,0,8,0">
+                            <fa:ImageAwesome Icon="CloudDownload" Width="12" Foreground="{StaticResource Accent}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock x:Name="TitleText" Text="Download File Info" FontSize="13" FontWeight="Bold" Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <Button Style="{StaticResource WindowMinimizeBtn}" Click="MinimizeBtn_Click">
+                            <fa:ImageAwesome Icon="Minus" Width="8" Foreground="{StaticResource TextSecondary}"/>
+                        </Button>
+                        <Button Style="{StaticResource WindowCloseBtn}" Click="CloseBtn_Click" Margin="4,0,0,0">
+                            <fa:ImageAwesome Icon="Times" Width="9"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+            <Border Grid.Row="0" Height="1" Background="{StaticResource CardBorder}" VerticalAlignment="Bottom"/>
+
+            <!-- CONTENT -->
+            <Grid Grid.Row="1">
+
+                <!-- STATE 1: START DOWNLOAD (780x440, NO scroll) -->
+                <Grid x:Name="State1Panel" Visibility="Visible">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" Margin="18,12,18,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="14"/>
+                            <ColumnDefinition Width="190"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- LEFT FORM (no ScrollViewer) -->
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="URL" Style="{StaticResource PopupLabel}"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0" Style="{StaticResource PopupDarkInput}" Text="https://zebra.wifi4games.com/Factory.Outlet.Simulator/wifi4games.com].rar"/>
+                                <Button Grid.Column="1" Style="{StaticResource BrowseBtnStyle}" Margin="6,0,0,0">
+                                    <fa:ImageAwesome Icon="Link" Width="11"/>
+                                </Button>
+                            </Grid>
+
+                            <TextBlock Text="File Name" Style="{StaticResource PopupLabel}" Margin="0,10,0,5"/>
+                            <Grid>
+                                <TextBox Style="{StaticResource PopupDarkInput}" Text="Factory.Outlet.Simulator[wifi4games.com].rar" Padding="10,0,60,0"/>
+                                <TextBlock Text="1.64 GB" FontSize="11" Foreground="{StaticResource TextMuted}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            </Grid>
+
+                            <TextBlock Text="Category" Style="{StaticResource PopupLabel}" Margin="0,10,0,5"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ComboBox x:Name="CategoryCombo" Grid.Column="0" Style="{StaticResource PopupComboBox}">
+                                    <ComboBoxItem Content="Compressed" IsSelected="True"/>
+                                    <ComboBoxItem Content="OS / ISO Images"/>
+                                    <ComboBoxItem Content="Documents"/>
+                                    <ComboBoxItem Content="Music"/>
+                                    <ComboBoxItem Content="Video"/>
+                                    <ComboBoxItem Content="Software"/>
+                                </ComboBox>
+                                <Button Grid.Column="1" Style="{StaticResource PopupSecondaryBtnStyle}" Content="+ New" Margin="6,0,0,0" Foreground="{StaticResource Accent}" BorderBrush="Transparent" Background="Transparent" Padding="8,0" Click="NewCategory_Click"/>
+                            </Grid>
+
+                            <TextBlock Text="Save As" Style="{StaticResource PopupLabel}" Margin="0,10,0,5"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0" Style="{StaticResource PopupDarkInput}" Text="Downloads\Compressed\Factory.Outlet.Simulator.rar"/>
+                                <Button Grid.Column="1" Style="{StaticResource PopupSecondaryBtnStyle}" Content="Browse" Margin="6,0,0,0" Padding="12,0"/>
+                            </Grid>
+
+                            <CheckBox Content='Remember this path for "Compressed" category' Style="{StaticResource PopupCheckBoxStyle}" IsChecked="True"/>
+
+                            <TextBlock Text="Description" Style="{StaticResource PopupLabel}" Margin="0,10,0,5"/>
+                            <TextBox Style="{StaticResource PopupDarkInput}" Text="" Tag="Add a description (optional)..."
+                                     AcceptsReturn="False" MaxLength="200"
+                                     x:Name="DescriptionBox"/>
+                        </StackPanel>
+
+                        <!-- RIGHT INFO CARD -->
+                        <Border Grid.Column="2" Style="{StaticResource FileInfoCardStyle}" VerticalAlignment="Top">
+                            <StackPanel>
+                                <Border Width="48" Height="48" CornerRadius="10" Background="White" BorderBrush="{StaticResource CardBorder}" BorderThickness="1" HorizontalAlignment="Center" Margin="0,0,0,8">
+                                    <fa:ImageAwesome Icon="Archive" Width="20" Foreground="{StaticResource Accent}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <Grid Margin="0,0,0,5">
+                                    <TextBlock Text="File Size:" FontSize="11" Foreground="{StaticResource TextSecondary}"/>
+                                    <TextBlock Text="1.64 GB" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right"/>
+                                </Grid>
+                                <Grid Margin="0,0,0,5">
+                                    <TextBlock Text="Disk Space:" FontSize="11" Foreground="{StaticResource TextSecondary}"/>
+                                    <TextBlock Text="78.32 GB" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right"/>
+                                </Grid>
+                                <Grid Margin="0,0,0,5">
+                                    <TextBlock Text="Free Space:" FontSize="11" Foreground="{StaticResource TextSecondary}"/>
+                                    <TextBlock Text="56.71 GB" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right"/>
+                                </Grid>
+                                <Border Height="1" Background="{StaticResource CardBorder}" Margin="0,3,0,6"/>
+                                <Grid Margin="0,0,0,5">
+                                    <TextBlock Text="Connections:" FontSize="11" Foreground="{StaticResource TextSecondary}"/>
+                                    <TextBlock Text="16" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Accent}" HorizontalAlignment="Right"/>
+                                </Grid>
+                                <Grid Margin="0,0,0,5">
+                                    <TextBlock Text="Start Position:" FontSize="11" Foreground="{StaticResource TextSecondary}"/>
+                                    <TextBlock Text="0 Bytes" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right"/>
+                                </Grid>
+                                <Grid Margin="0,0,0,5">
+                                    <TextBlock Text="Parts:" FontSize="11" Foreground="{StaticResource TextSecondary}"/>
+                                    <TextBlock Text="32" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right"/>
+                                </Grid>
+                                <Grid Margin="0,0,0,5">
+                                    <TextBlock Text="Est. Time:" FontSize="11" Foreground="{StaticResource TextSecondary}"/>
+                                    <TextBlock Text="3m 42s" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right"/>
+                                </Grid>
+                                <Grid>
+                                    <TextBlock Text="Resume Support:" FontSize="11" Foreground="{StaticResource TextSecondary}"/>
+                                    <TextBlock Text="Yes" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Success}" HorizontalAlignment="Right"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- BOTTOM BAR -->
+                    <Border Grid.Row="1" Background="{StaticResource FooterBg}" CornerRadius="0,0,12,12" Padding="18,10" BorderBrush="{StaticResource CardBorder}" BorderThickness="0,1,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                <fa:ImageAwesome Icon="ClockOutline" Width="10" Foreground="{StaticResource TextMuted}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <ComboBox Style="{StaticResource PopupComboBox}" Width="130" Padding="28,0,10,0">
+                                    <ComboBoxItem Content="No Schedule" IsSelected="True"/>
+                                    <ComboBoxItem Content="Start at..."/>
+                                </ComboBox>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <Button Content="Download Later" Style="{StaticResource PopupSecondaryBtnStyle}" Margin="0,0,6,0" Padding="12,0" Click="DownloadLater_Click"/>
+                                <Button Content="Start Download" Style="{StaticResource StartDownloadBtn}" Padding="12,0" Click="StartDownload_Click"/>
+                                <Button Content="Cancel" Style="{StaticResource PopupSecondaryBtnStyle}" Margin="6,0,0,0" Padding="12,0" Click="CloseBtn_Click"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- STATE 2: DOWNLOADING (780x520) -->
+                <Grid x:Name="State2Panel" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- TABS -->
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="18,10,18,0">
+                        <RadioButton Style="{StaticResource TabButtonStyle}" IsChecked="True" Margin="0,0,5,0">
+                            <StackPanel Orientation="Horizontal">
+                                <fa:ImageAwesome Icon="ArrowCircleDown" Width="10" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Download Status" FontSize="11" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton Style="{StaticResource TabButtonStyle}" Margin="0,0,5,0">
+                            <StackPanel Orientation="Horizontal">
+                                <fa:ImageAwesome Icon="Tachometer" Width="10" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Speed Limiter" FontSize="11" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton Style="{StaticResource TabButtonStyle}">
+                            <StackPanel Orientation="Horizontal">
+                                <fa:ImageAwesome Icon="CheckCircle" Width="10" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Completion" FontSize="11" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </RadioButton>
+                    </StackPanel>
+
+                    <!-- INFO + RING + STATS -->
+                    <Border Grid.Row="1" Margin="18,8,18,0" Style="{StaticResource FileInfoCardStyle}" Padding="14,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="140"/>
+                                <ColumnDefinition Width="10"/>
+                                <ColumnDefinition Width="170"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- LEFT -->
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <fa:ImageAwesome Grid.Column="0" Icon="Link" Width="10" Foreground="{StaticResource TextMuted}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" FontSize="11" Foreground="{StaticResource TextSecondary}">
+                                        <Run Text="URL: "/><Run Text="https://zebra.wifi4games.com/..." Foreground="{StaticResource TextPrimary}"/>
+                                    </TextBlock>
+                                </Grid>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <fa:ImageAwesome Grid.Column="0" Icon="Refresh" Width="10" Foreground="{StaticResource Accent}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Accent}" Text="Status: Receiving data..."/>
+                                </Grid>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <fa:ImageAwesome Grid.Column="0" Icon="File" Width="10" Foreground="{StaticResource TextMuted}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" FontSize="11" Foreground="{StaticResource TextSecondary}">
+                                        <Run Text="File Size: "/><Run x:Name="SizeDetailRun" Text="1.64 GB" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}"/>
+                                    </TextBlock>
+                                </Grid>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <fa:ImageAwesome Grid.Column="0" Icon="Download" Width="10" Foreground="{StaticResource TextMuted}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" FontSize="11" Foreground="{StaticResource TextSecondary}">
+                                        <Run Text="Downloaded: "/><Run x:Name="DownloadedRun" Text="0.00 GB" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}"/>
+                                        <Run Text=" ("/><Run x:Name="PercentText2" Text="0.0%" FontWeight="SemiBold" Foreground="{StaticResource Accent}"/><Run Text=")"/>
+                                    </TextBlock>
+                                </Grid>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <fa:ImageAwesome Grid.Column="0" Icon="Tachometer" Width="10" Foreground="{StaticResource TextMuted}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" FontSize="11" Foreground="{StaticResource TextSecondary}">
+                                        <Run Text="Transfer Rate: "/><Run x:Name="SpeedText" Text="0.0 MB/s" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}"/>
+                                    </TextBlock>
+                                </Grid>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <fa:ImageAwesome Grid.Column="0" Icon="ClockOutline" Width="10" Foreground="{StaticResource TextMuted}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" FontSize="11" Foreground="{StaticResource TextSecondary}">
+                                        <Run Text="Time Left: "/><Run x:Name="TimeLeftText" Text="--:--" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}"/>
+                                    </TextBlock>
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <fa:ImageAwesome Grid.Column="0" Icon="ArrowCircleDown" Width="10" Foreground="{StaticResource TextMuted}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" FontSize="11" Foreground="{StaticResource TextSecondary}">
+                                        <Run Text="Resume: "/><Run Text="Yes (Support)" FontWeight="SemiBold" Foreground="{StaticResource Success}"/>
+                                    </TextBlock>
+                                </Grid>
+                            </StackPanel>
+
+                            <!-- RING -->
+                            <Grid Grid.Column="1" VerticalAlignment="Center">
+                                <Grid RenderTransformOrigin="0.5,0.5" Width="110" Height="110">
+                                    <Grid.RenderTransform><RotateTransform Angle="0"/></Grid.RenderTransform>
+                                    <Grid.Triggers>
+                                        <EventTrigger RoutedEvent="Grid.Loaded">
+                                            <BeginStoryboard Storyboard="{StaticResource RotateRingAnimation}"/>
+                                        </EventTrigger>
+                                    </Grid.Triggers>
+                                    <Ellipse Width="110" Height="110" Stroke="{StaticResource CardBorder}" StrokeThickness="7"/>
+                                    <Ellipse Width="110" Height="110" Stroke="{StaticResource Accent}" StrokeThickness="7" StrokeDashArray="2.2 10" StrokeDashCap="Round"/>
+                                </Grid>
+                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock x:Name="PercentText" Text="0.0%" FontSize="20" FontWeight="Bold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="Downloaded" FontSize="8" Foreground="{StaticResource TextMuted}" HorizontalAlignment="Center" Margin="0,1,0,0"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- RIGHT STATS -->
+                            <StackPanel Grid.Column="3" VerticalAlignment="Center">
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <fa:ImageAwesome Grid.Column="0" Icon="Tachometer" Width="10" Foreground="{StaticResource TextMuted}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" FontSize="11" Foreground="{StaticResource TextSecondary}">
+                                        <Run Text="Average Speed: "/><Run x:Name="AvgSpeedStat" Text="0.0 MB/s" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}"/>
+                                    </TextBlock>
+                                </Grid>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <fa:ImageAwesome Grid.Column="0" Icon="LineChart" Width="10" Foreground="{StaticResource TextMuted}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" FontSize="11" Foreground="{StaticResource TextSecondary}">
+                                        <Run Text="Current Speed: "/><Run x:Name="SpeedStat" Text="0.0 MB/s" FontWeight="SemiBold" Foreground="{StaticResource Accent}"/>
+                                    </TextBlock>
+                                </Grid>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <fa:ImageAwesome Grid.Column="0" Icon="Users" Width="10" Foreground="{StaticResource TextMuted}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" FontSize="11" Foreground="{StaticResource TextSecondary}">
+                                        <Run Text="Connections: "/><Run Text="16" FontWeight="SemiBold" Foreground="{StaticResource Accent}"/>
+                                    </TextBlock>
+                                </Grid>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <fa:ImageAwesome Grid.Column="0" Icon="ListAlt" Width="10" Foreground="{StaticResource TextMuted}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" FontSize="11" Foreground="{StaticResource TextSecondary}">
+                                        <Run Text="Downloaded Parts: "/><Run x:Name="PartsText" Text="0 / 32" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}"/>
+                                    </TextBlock>
+                                </Grid>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <fa:ImageAwesome Grid.Column="0" Icon="ClockOutline" Width="10" Foreground="{StaticResource TextMuted}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" FontSize="11" Foreground="{StaticResource TextSecondary}">
+                                        <Run Text="Start Time: "/><Run Text="10:24:31 AM" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}"/>
+                                    </TextBlock>
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <fa:ImageAwesome Grid.Column="0" Icon="HourglassHalf" Width="10" Foreground="{StaticResource TextMuted}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" FontSize="11" Foreground="{StaticResource TextSecondary}">
+                                        <Run Text="ETA: "/><Run x:Name="TimeLeftStat" Text="--:--" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}"/>
+                                    </TextBlock>
+                                </Grid>
+                                <TextBlock x:Name="SizeText" Text="0.00 GB" Visibility="Collapsed"/>
+                                <TextBlock x:Name="RemainingStat" Text="0.00 GB" Visibility="Collapsed"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- MAIN PROGRESS BAR -->
+                    <Grid Grid.Row="2" Margin="18,8,18,0">
+                        <ProgressBar x:Name="DownloadProgressBar" Style="{StaticResource ChunkProgressBar}" Value="0" Maximum="100"/>
+                    </Grid>
+
+                    <!-- CONNECTION SEGMENTS -->
+                    <Grid x:Name="ConnectionSegmentsSection" Grid.Row="3" Margin="18,8,18,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Text="Start positions and download progress by connections" FontSize="10" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,5"/>
+                        <Border Grid.Row="1" Height="8" CornerRadius="4" Background="#E5E7EB" ClipToBounds="True">
+                            <Grid x:Name="ConnectionSegments">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="5*"/>
+                                    <ColumnDefinition Width="2"/>
+                                    <ColumnDefinition Width="4*"/>
+                                    <ColumnDefinition Width="2"/>
+                                    <ColumnDefinition Width="3*"/>
+                                    <ColumnDefinition Width="2"/>
+                                    <ColumnDefinition Width="2*"/>
+                                    <ColumnDefinition Width="2"/>
+                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="2"/>
+                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="2"/>
+                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="2"/>
+                                    <ColumnDefinition Width="1*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0" Background="{StaticResource Accent}" CornerRadius="4,0,0,4"/>
+                                <Border Grid.Column="1" Background="Transparent"/>
+                                <Border Grid.Column="2" Background="{StaticResource Accent}"/>
+                                <Border Grid.Column="3" Background="Transparent"/>
+                                <Border Grid.Column="4" Background="{StaticResource Accent}"/>
+                                <Border Grid.Column="5" Background="Transparent"/>
+                                <Border Grid.Column="6" Background="{StaticResource AccentLight}"/>
+                                <Border Grid.Column="7" Background="Transparent"/>
+                                <Border Grid.Column="8" Background="{StaticResource AccentLight}"/>
+                                <Border Grid.Column="9" Background="Transparent"/>
+                                <Border Grid.Column="10" Background="#E5E7EB"/>
+                                <Border Grid.Column="11" Background="Transparent"/>
+                                <Border Grid.Column="12" Background="#E5E7EB"/>
+                                <Border Grid.Column="13" Background="Transparent"/>
+                                <Border Grid.Column="14" Background="#E5E7EB" CornerRadius="0,4,4,0"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <!-- CHUNK TABLE (Full Width Redesign) -->
+                    <Border x:Name="ChunkDetailsSection" Grid.Row="4" Margin="18,8,18,0" Style="{StaticResource FileInfoCardStyle}" Padding="10,6">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- HEADER -->
+                            <Grid Grid.Row="0" Margin="2,0,2,4">
+                                <StackPanel Orientation="Horizontal">
+                                    <fa:ImageAwesome Icon="ListAlt" Width="10" Foreground="{StaticResource Accent}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Connection / Chunk Details" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock x:Name="ChunkStatus" Text="0 / 8 completed" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource Accent}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                            </Grid>
+
+                            <!-- COLUMN HEADERS -->
+                            <Grid Grid.Row="1" Margin="6,0,6,2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="30"/>
+                                    <ColumnDefinition Width="80"/>
+                                    <ColumnDefinition Width="85"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="42"/>
+                                    <ColumnDefinition Width="75"/>
+                                    <ColumnDefinition Width="62"/>
+                                    <ColumnDefinition Width="65"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="#" Style="{StaticResource ChunkHeaderText}"/>
+                                <TextBlock Grid.Column="1" Text="Downloaded" Style="{StaticResource ChunkHeaderText}"/>
+                                <TextBlock Grid.Column="2" Text="Status" Style="{StaticResource ChunkHeaderText}"/>
+                                <TextBlock Grid.Column="3" Text="Progress" Style="{StaticResource ChunkHeaderText}"/>
+                                <TextBlock Grid.Column="4" Text="%" Style="{StaticResource ChunkHeaderText}"/>
+                                <TextBlock Grid.Column="5" Text="Start Pos" Style="{StaticResource ChunkHeaderText}"/>
+                                <TextBlock Grid.Column="6" Text="Size" Style="{StaticResource ChunkHeaderText}"/>
+                                <TextBlock Grid.Column="7" Text="Speed" Style="{StaticResource ChunkHeaderText}"/>
+                            </Grid>
+                            <Border Grid.Row="1" Height="1" Background="{StaticResource CardBorder}" VerticalAlignment="Bottom" Margin="6,0"/>
+
+                            <!-- CHUNK ROWS (ItemsControl with Grid per row) -->
+                            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <ItemsControl x:Name="ChunkItemsControl" Margin="6,4,6,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="0,2">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="30"/>
+                                                    <ColumnDefinition Width="80"/>
+                                                    <ColumnDefinition Width="85"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="42"/>
+                                                    <ColumnDefinition Width="75"/>
+                                                    <ColumnDefinition Width="62"/>
+                                                    <ColumnDefinition Width="65"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding ChunkNum}" Style="{StaticResource ChunkRowText}" FontWeight="SemiBold"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding Range}" Style="{StaticResource ChunkRowTextPrimary}"/>
+                                                <TextBlock Grid.Column="2" Text="{Binding Info}">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock" BasedOn="{StaticResource ChunkRowText}">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Info}" Value="Receiving data...">
+                                                                    <Setter Property="Foreground" Value="{StaticResource Accent}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Info}" Value="Completed">
+                                                                    <Setter Property="Foreground" Value="{StaticResource Success}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Info}" Value="Queued">
+                                                                    <Setter Property="Foreground" Value="{StaticResource TextMuted}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <ProgressBar Grid.Column="3" Style="{StaticResource MiniProgressBar}" Value="{Binding ProgressPercent}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="4" Text="{Binding ProgressPercent, StringFormat={}{0:F0}%}" Style="{StaticResource ChunkRowText}" FontWeight="SemiBold" Foreground="{StaticResource Accent}"/>
+                                                <TextBlock Grid.Column="5" Text="{Binding StartPos}" Style="{StaticResource ChunkRowText}"/>
+                                                <TextBlock Grid.Column="6" Text="{Binding Size}" Style="{StaticResource ChunkRowText}"/>
+                                                <TextBlock Grid.Column="7" Text="{Binding Speed}" Style="{StaticResource ChunkRowText}" Foreground="{StaticResource Accent}"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Grid>
+                    </Border>
+
+                    <!-- BOTTOM BAR -->
+                    <Border Grid.Row="5" Background="{StaticResource FooterBg}" CornerRadius="0,0,12,12" Padding="18,10" BorderBrush="{StaticResource CardBorder}" BorderThickness="0,1,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Button x:Name="HideDetailsBtn" Grid.Column="0" Content="Hide Details" Style="{StaticResource PopupSecondaryBtnStyle}" HorizontalAlignment="Left" Padding="12,0" Click="HideDetails_Click"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <Button x:Name="PauseResumeBtn" Content="PAUSE" Style="{StaticResource PopupSecondaryBtnStyle}" Padding="14,0" Click="PauseResume_Click"/>
+                                <Button Content="Cancel" Style="{StaticResource DangerOutlineBtn}" Padding="14,0" Margin="6,0,0,0" Click="Stop_Click"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- STATE 3: COMPLETED (780x460) - COMPACT LAYOUT -->
+                <Grid x:Name="State3Panel" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- HEADER -->
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="18,14,18,0">
+                        <Border Width="34" Height="34" CornerRadius="17" Background="{StaticResource SuccessSoft}" Margin="0,0,10,0">
+                            <fa:ImageAwesome Icon="Check" Width="14" Foreground="{StaticResource Success}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Download Completed" FontSize="13.5" FontWeight="Bold" Foreground="{StaticResource TextPrimary}"/>
+                            <TextBlock Text="The file has been downloaded successfully." FontSize="10.5" Foreground="{StaticResource TextSecondary}" Margin="0,1,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- CONTENT: TWO COLUMNS -->
+                    <Grid Grid.Row="1" Margin="18,10,18,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="180"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- LEFT COLUMN: FILE INFO + SAVED TO + SOURCE URL -->
+                        <StackPanel Grid.Column="0">
+                            <!-- FILE INFO CARD -->
+                            <Border Style="{StaticResource FileInfoCardStyle}" Padding="14,12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="52"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- FILE PREVIEW ICON -->
+                                    <Border Grid.Column="0" Width="46" Height="54" CornerRadius="6" Background="White" BorderBrush="{StaticResource CardBorder}" BorderThickness="1" VerticalAlignment="Top">
+                                        <fa:ImageAwesome Icon="Archive" Width="20" Foreground="{StaticResource Accent}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+
+                                    <!-- FILE INFO ROWS -->
+                                    <StackPanel Grid.Column="1">
+                                        <Grid Margin="0,0,0,5">
+                                            <StackPanel Orientation="Horizontal"><fa:ImageAwesome Icon="File" Width="9" Foreground="{StaticResource TextMuted}" Margin="0,0,6,0" VerticalAlignment="Center"/><TextBlock Text="File Name" FontSize="11" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/></StackPanel>
+                                            <TextBlock x:Name="CompletedFileName" Text="Factory.Outlet.Simulator.rar" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <Grid Margin="0,0,0,5">
+                                            <StackPanel Orientation="Horizontal"><fa:ImageAwesome Icon="Database" Width="9" Foreground="{StaticResource TextMuted}" Margin="0,0,6,0" VerticalAlignment="Center"/><TextBlock Text="File Size" FontSize="11" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/></StackPanel>
+                                            <TextBlock x:Name="CompletedFullSizeText" Text="1.64 GB" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <Grid Margin="0,0,0,5">
+                                            <StackPanel Orientation="Horizontal"><fa:ImageAwesome Icon="Archive" Width="9" Foreground="{StaticResource TextMuted}" Margin="0,0,6,0" VerticalAlignment="Center"/><TextBlock Text="Category" FontSize="11" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/></StackPanel>
+                                            <TextBlock Text="Compressed Archive" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <Grid Margin="0,0,0,5">
+                                            <StackPanel Orientation="Horizontal"><fa:ImageAwesome Icon="ClockOutline" Width="9" Foreground="{StaticResource TextMuted}" Margin="0,0,6,0" VerticalAlignment="Center"/><TextBlock Text="Download Duration" FontSize="11" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/></StackPanel>
+                                            <TextBlock x:Name="CompletedTimeText" Text="3m 42s" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <Grid Margin="0,0,0,5">
+                                            <StackPanel Orientation="Horizontal"><fa:ImageAwesome Icon="Tachometer" Width="9" Foreground="{StaticResource TextMuted}" Margin="0,0,6,0" VerticalAlignment="Center"/><TextBlock Text="Average Speed" FontSize="11" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/></StackPanel>
+                                            <TextBlock x:Name="CompletedAvgSpeed" Text="11.7 MB/s" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <Grid Margin="0,0,0,5">
+                                            <StackPanel Orientation="Horizontal"><fa:ImageAwesome Icon="ClockOutline" Width="9" Foreground="{StaticResource TextMuted}" Margin="0,0,6,0" VerticalAlignment="Center"/><TextBlock Text="Completed At" FontSize="11" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/></StackPanel>
+                                            <TextBlock Text="10:42 AM" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <Grid Margin="0,0,0,5">
+                                            <StackPanel Orientation="Horizontal"><fa:ImageAwesome Icon="Refresh" Width="9" Foreground="{StaticResource TextMuted}" Margin="0,0,6,0" VerticalAlignment="Center"/><TextBlock Text="Resume Support" FontSize="11" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/></StackPanel>
+                                            <TextBlock Text="Supported" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <Grid>
+                                            <StackPanel Orientation="Horizontal"><fa:ImageAwesome Icon="Shield" Width="9" Foreground="{StaticResource TextMuted}" Margin="0,0,6,0" VerticalAlignment="Center"/><TextBlock Text="Integrity" FontSize="11" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/></StackPanel>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                <TextBlock Text="Verified" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Success}"/>
+                                                <fa:ImageAwesome Icon="Check" Width="9" Foreground="{StaticResource Success}" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- SAVED TO -->
+                            <Border Style="{StaticResource FileInfoCardStyle}" Padding="12,8" Margin="0,6,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <fa:ImageAwesome Icon="FolderOpen" Width="9" Foreground="{StaticResource TextMuted}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Saved To" FontSize="11" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center" Width="60"/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="1" Text="Downloads\Compressed\Factory.Outlet.Simulator.rar" FontSize="10" Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center" Margin="6,0" TextTrimming="CharacterEllipsis"/>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Button Style="{StaticResource BrowseBtnStyle}" Width="22" Height="22" Margin="0,0,3,0"><fa:ImageAwesome Icon="FolderOpen" Width="8"/></Button>
+                                        <Button Style="{StaticResource BrowseBtnStyle}" Width="22" Height="22"><fa:ImageAwesome Icon="Link" Width="8"/></Button>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- SOURCE URL -->
+                            <Border Style="{StaticResource FileInfoCardStyle}" Padding="12,8" Margin="0,6,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <fa:ImageAwesome Icon="Link" Width="9" Foreground="{StaticResource TextMuted}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Source URL" FontSize="11" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center" Width="60"/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="1" Text="https://zebra.wifi4games.com/Factory.Outlet.Simulator.rar" FontSize="10" Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center" Margin="6,0" TextTrimming="CharacterEllipsis"/>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Button Style="{StaticResource BrowseBtnStyle}" Width="22" Height="22" Margin="0,0,3,0"><fa:ImageAwesome Icon="ArrowCircleDown" Width="8"/></Button>
+                                        <Button Style="{StaticResource BrowseBtnStyle}" Width="22" Height="22"><fa:ImageAwesome Icon="Link" Width="8"/></Button>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- RIGHT COLUMN: SUCCESS CARD + STATS -->
+                        <StackPanel Grid.Column="2">
+                            <!-- SUCCESS CARD -->
+                            <Border Background="{StaticResource SuccessSoft}" CornerRadius="8" BorderBrush="{StaticResource SuccessBorder}" BorderThickness="1" Padding="14,14">
+                                <StackPanel>
+                                    <Grid HorizontalAlignment="Center" Margin="0,0,0,8">
+                                        <Border Width="50" Height="50" CornerRadius="25" Background="White" HorizontalAlignment="Center">
+                                            <fa:ImageAwesome Icon="Check" Width="20" Foreground="{StaticResource Success}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                    </Grid>
+                                    <TextBlock Text="Download Complete" FontSize="12" FontWeight="Bold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,3" HorizontalAlignment="Center">
+                                        <fa:ImageAwesome Icon="Check" Width="8" Foreground="{StaticResource Success}" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="File Ready" FontSize="10.5" Foreground="{StaticResource Success}" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,3" HorizontalAlignment="Center">
+                                        <fa:ImageAwesome Icon="Check" Width="8" Foreground="{StaticResource Success}" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Saved Successfully" FontSize="10.5" Foreground="{StaticResource Success}" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <fa:ImageAwesome Icon="Check" Width="8" Foreground="{StaticResource Success}" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="No Errors" FontSize="10.5" Foreground="{StaticResource Success}" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- STATS CARD -->
+                            <Border Style="{StaticResource FileInfoCardStyle}" Padding="12,10" Margin="0,6,0,0">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,5">
+                                        <StackPanel Orientation="Horizontal"><fa:ImageAwesome Icon="Download" Width="9" Foreground="{StaticResource TextMuted}" Margin="0,0,6,0" VerticalAlignment="Center"/><TextBlock Text="Files Downloaded Today" FontSize="10.5" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/></StackPanel>
+                                        <TextBlock Text="12" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,5">
+                                        <StackPanel Orientation="Horizontal"><fa:ImageAwesome Icon="Database" Width="9" Foreground="{StaticResource TextMuted}" Margin="0,0,6,0" VerticalAlignment="Center"/><TextBlock Text="Downloaded Size" FontSize="10.5" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/></StackPanel>
+                                        <TextBlock Text="8.7 GB" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right"/>
+                                    </Grid>
+                                    <Grid>
+                                        <StackPanel Orientation="Horizontal"><fa:ImageAwesome Icon="Database" Width="9" Foreground="{StaticResource TextMuted}" Margin="0,0,6,0" VerticalAlignment="Center"/><TextBlock Text="Free Disk Space" FontSize="10.5" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/></StackPanel>
+                                        <TextBlock Text="58.2 GB" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- BOTTOM BAR: BUTTONS -->
+                    <Border Grid.Row="2" Background="{StaticResource FooterBg}" Padding="18,8" BorderBrush="{StaticResource CardBorder}" BorderThickness="0,1,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Content="Open File" Style="{StaticResource SuccessBtn}" Padding="14,0" Click="OpenFile_Click"/>
+                            <Button Grid.Column="1" Content="Open Folder" Style="{StaticResource PopupSecondaryBtnStyle}" Padding="14,0" Margin="6,0,0,0" Click="OpenFolder_Click"/>
+                            <Button Grid.Column="2" Content="Open With" Style="{StaticResource PopupSecondaryBtnStyle}" Padding="14,0" Margin="6,0,0,0" Click="OpenWith_Click"/>
+                            <Button Grid.Column="3" Content="Share" Style="{StaticResource PopupSecondaryBtnStyle}" Padding="14,0" Margin="6,0,0,0"/>
+                            <Button Grid.Column="4" Content="Close" Style="{StaticResource PopupSecondaryBtnStyle}" Padding="14,0" Margin="6,0,0,0" Click="CloseBtn_Click"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- CHECKBOX + SETTINGS -->
+                    <Border Grid.Row="3" Background="{StaticResource FooterBg}" CornerRadius="0,0,12,12" Padding="18,4,18,12">
+                        <StackPanel>
+                            <CheckBox Content="Automatically close completed downloads" Style="{StaticResource PopupCheckBoxStyle}" IsChecked="True"/>
+                            <TextBlock Text="You can change this behavior in Settings." FontSize="9.5" Foreground="{StaticResource TextMuted}" Margin="18,2,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+            </Grid>
+        </Grid>
+    </Border>
+</Window>
