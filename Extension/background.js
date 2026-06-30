@@ -36,9 +36,11 @@ class BackgroundService {
     await this.loadSettings();
     this.setupEventListeners();
     this.setupContextMenus();
-    this.communicator.connect(this.settings.port);
 
-    console.log('[MAC-1] Background service initialized');
+    const connected = await this.communicator.connect(this.settings.port);
+    console.log('[MAC-1] Background service initialized, connected:', connected);
+
+    this.updateBadge();
   }
 
   async loadSettings() {
@@ -103,9 +105,9 @@ class BackgroundService {
     });
 
     chrome.contextMenus.create({
-      id: 'mac1-download-selected',
-      title: 'Download selected links with MAC-1',
-      contexts: ['selection']
+      id: 'mac1-download-page',
+      title: 'Download all links with MAC-1',
+      contexts: ['page']
     });
 
     chrome.contextMenus.onClicked.addListener((info, tab) => {
@@ -128,12 +130,13 @@ class BackgroundService {
 
       const completeData = await this.collector.collectAllData(downloadItem);
       this.activeDownloads.set(downloadItem.id, completeData);
+      this.updateBadge();
 
-      this.communicator.sendDownload(completeData);
+      await this.communicator.sendDownload(completeData);
 
       this.showNotification(
         'Download Captured',
-        `${completeData.filename} sent to MAC-1`
+        `${completeData.filename || 'File'} sent to MAC-1`
       );
 
     } catch (e) {
@@ -149,28 +152,24 @@ class BackgroundService {
   async handleContextMenu(info, tab) {
     if (info.menuItemId === 'mac1-download-link' && info.linkUrl) {
       const data = await this.collector.collectFromTab(tab, info.linkUrl);
-      this.communicator.sendDownload(data);
+      await this.communicator.sendDownload(data);
     }
 
-    if (info.menuItemId === 'mac1-download-selected') {
-      const links = await this.extractLinksFromSelection(tab);
+    if (info.menuItemId === 'mac1-download-page') {
+      const links = await this.getPageLinks(tab);
       for (const link of links) {
         const data = await this.collector.collectFromTab(tab, link);
-        this.communicator.sendDownload(data);
+        await this.communicator.sendDownload(data);
       }
     }
   }
 
-  async extractLinksFromSelection(tab) {
+  async getPageLinks(tab) {
     try {
       const results = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         func: () => {
-          const selection = window.getSelection();
-          if (!selection) return [];
-          const range = selection.getRangeAt(0);
-          const fragment = range.cloneContents();
-          const links = fragment.querySelectorAll('a[href]');
+          const links = document.querySelectorAll('a[href]');
           return Array.from(links).map(a => a.href);
         }
       });
@@ -193,6 +192,7 @@ class BackgroundService {
       case 'TOGGLE_ENABLED':
         this.settings.enabled = !this.settings.enabled;
         this.saveSettings();
+        this.updateBadge();
         sendResponse({ enabled: this.settings.enabled });
         break;
 
@@ -211,9 +211,25 @@ class BackgroundService {
         sendResponse({ success: true });
         break;
 
+      case 'CHECK_CONNECTION':
+        this.checkConnection().then(connected => {
+          sendResponse({ connected });
+        });
+        return true;
+
       case 'DOWNLOAD_COMPLETE':
         this.activeDownloads.delete(message.downloadId);
+        this.updateBadge();
         break;
+    }
+  }
+
+  async checkConnection() {
+    try {
+      await this.communicator.connect(this.settings.port);
+      return this.communicator.isConnected;
+    } catch (e) {
+      return false;
     }
   }
 
@@ -228,10 +244,18 @@ class BackgroundService {
       }
 
       const data = await this.collector.collectFromTab(tab, url);
-      this.communicator.sendDownload(data);
+      await this.communicator.sendDownload(data);
+
+      this.showNotification('Download Started', `Sending to MAC-1`);
     } catch (e) {
       console.error('[MAC-1] Manual download failed:', e);
     }
+  }
+
+  updateBadge() {
+    const count = this.activeDownloads.size;
+    chrome.action.setBadgeText({ text: count > 0 ? count.toString() : '' });
+    chrome.action.setBadgeBackgroundColor({ color: count > 0 ? '#0077FF' : '#888888' });
   }
 
   showNotification(title, message) {

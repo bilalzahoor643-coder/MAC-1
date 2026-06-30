@@ -1,39 +1,33 @@
 export class Communicator {
   constructor() {
-    this.port = null;
+    this.baseUrl = 'http://127.0.0.1:57575';
     this.isConnected = false;
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
     this.reconnectDelay = 1000;
     this.messageQueue = [];
-    this.pendingResponses = new Map();
-    this.portName = 'MAC-1-Extension';
   }
 
-  connect(targetPort) {
+  async connect(port) {
+    if (port) {
+      this.baseUrl = `http://127.0.0.1:${port}`;
+    }
+
     try {
-      this.port = chrome.runtime.connectNative('com.mac1.downloader');
-
-      this.port.onMessage.addListener((message) => {
-        this.handleMessage(message);
-      });
-
-      this.port.onDisconnect.addListener(() => {
-        this.isConnected = false;
-        console.log('[MAC-1] Disconnected from desktop app');
-        this.attemptReconnect();
-      });
-
-      this.isConnected = true;
-      this.reconnectAttempts = 0;
-      console.log('[MAC-1] Connected to desktop app');
-
-      this.sendQueue();
-
+      const response = await this.healthCheck();
+      if (response && response.status === 'ok') {
+        this.isConnected = true;
+        this.reconnectAttempts = 0;
+        console.log('[MAC-1] Connected to desktop app:', response);
+        this.sendQueue();
+        return true;
+      }
     } catch (e) {
-      console.error('[MAC-1] Connection failed:', e);
+      console.log('[MAC-1] Connection failed, will retry...');
+      this.isConnected = false;
       this.attemptReconnect();
     }
+    return false;
   }
 
   attemptReconnect() {
@@ -50,175 +44,78 @@ export class Communicator {
     }, this.reconnectDelay * this.reconnectAttempts);
   }
 
-  send(message) {
-    if (!this.isConnected || !this.port) {
-      this.messageQueue.push(message);
-      return false;
-    }
+  async healthCheck() {
+    return await this.request('/api/health', 'GET');
+  }
+
+  async ping() {
+    return await this.request('/api/ping', 'GET');
+  }
+
+  async getStatus() {
+    return await this.request('/api/status', 'GET');
+  }
+
+  async sendDownload(downloadData) {
+    const message = {
+      url: downloadData.url,
+      filename: downloadData.filename,
+      fileSize: downloadData.fileSize,
+      referrer: downloadData.referrer,
+      mimeType: downloadData.mimeType,
+      savePath: downloadData.savePath,
+      userAgent: downloadData.userAgent,
+      cookies: downloadData.cookies,
+      headers: downloadData.headers,
+      tab: downloadData.tab,
+      clientHints: downloadData.clientHints,
+      timestamp: Date.now()
+    };
 
     try {
-      this.port.postMessage(message);
-      return true;
+      const response = await this.request('/api/download', 'POST', message);
+      console.log('[MAC-1] Download sent:', response);
+      return response;
     } catch (e) {
-      console.error('[MAC-1] Failed to send message:', e);
+      console.error('[MAC-1] Failed to send download:', e);
       this.messageQueue.push(message);
-      return false;
+      throw e;
     }
   }
 
-  sendDownload(downloadData) {
-    const message = {
-      type: 'DOWNLOAD_REQUEST',
-      data: downloadData,
-      timestamp: Date.now()
-    };
+  async request(path, method, body = null) {
+    const url = `${this.baseUrl}${path}`;
 
-    return this.send(message);
-  }
-
-  sendProgress(downloadId, progress) {
-    const message = {
-      type: 'DOWNLOAD_PROGRESS',
-      downloadId: downloadId,
-      progress: progress,
-      timestamp: Date.now()
-    };
-
-    return this.send(message);
-  }
-
-  sendComplete(downloadId) {
-    const message = {
-      type: 'DOWNLOAD_COMPLETE',
-      downloadId: downloadId,
-      timestamp: Date.now()
-    };
-
-    return this.send(message);
-  }
-
-  sendError(downloadId, error) {
-    const message = {
-      type: 'DOWNLOAD_ERROR',
-      downloadId: downloadId,
-      error: error,
-      timestamp: Date.now()
-    };
-
-    return this.send(message);
-  }
-
-  handleMessage(message) {
-    console.log('[MAC-1] Received:', message);
-
-    switch (message.type) {
-      case 'DOWNLOAD_RESPONSE':
-        this.handleDownloadResponse(message);
-        break;
-
-      case 'PROGRESS_UPDATE':
-        this.handleProgressUpdate(message);
-        break;
-
-      case 'DOWNLOAD_COMPLETE':
-        this.handleDownloadComplete(message);
-        break;
-
-      case 'DOWNLOAD_ERROR':
-        this.handleDownloadError(message);
-        break;
-
-      case 'SETTINGS_SYNC':
-        this.handleSettingsSync(message);
-        break;
-
-      default:
-        console.log('[MAC-1] Unknown message type:', message.type);
-    }
-  }
-
-  handleDownloadResponse(message) {
-    const { downloadId, success, error } = message;
-    if (success) {
-      console.log(`[MAC-1] Download started: ${downloadId}`);
-    } else {
-      console.error(`[MAC-1] Download failed: ${error}`);
-    }
-
-    const callback = this.pendingResponses.get(downloadId);
-    if (callback) {
-      callback(message);
-      this.pendingResponses.delete(downloadId);
-    }
-  }
-
-  handleProgressUpdate(message) {
-    const { downloadId, progress } = message;
-    chrome.runtime.sendMessage({
-      type: 'PROGRESS_UPDATE',
-      downloadId: downloadId,
-      progress: progress
-    }).catch(() => {});
-  }
-
-  handleDownloadComplete(message) {
-    const { downloadId } = message;
-    chrome.runtime.sendMessage({
-      type: 'DOWNLOAD_COMPLETE',
-      downloadId: downloadId
-    }).catch(() => {});
-
-    chrome.downloads.search({ id: downloadId }, (items) => {
-      if (items.length > 0) {
-        const item = items[0];
-        this.showNotification(
-          'Download Complete',
-          `${item.filename} has been downloaded`
-        );
+    const options = {
+      method: method,
+      headers: {
+        'Content-Type': 'application/json'
       }
-    });
-  }
+    };
 
-  handleDownloadError(message) {
-    const { downloadId, error } = message;
-    chrome.runtime.sendMessage({
-      type: 'DOWNLOAD_ERROR',
-      downloadId: downloadId,
-      error: error
-    }).catch(() => {});
+    if (body) {
+      options.body = JSON.stringify(body);
+    }
 
-    this.showNotification(
-      'Download Failed',
-      error || 'An error occurred during download'
-    );
-  }
+    const response = await fetch(url, options);
 
-  handleSettingsSync(message) {
-    const { settings } = message;
-    chrome.storage.local.set({ settings: settings });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
   }
 
   sendQueue() {
     while (this.messageQueue.length > 0) {
       const message = this.messageQueue.shift();
-      this.send(message);
+      this.sendDownload(message).catch(e => {
+        console.error('[MAC-1] Failed to send queued message:', e);
+      });
     }
-  }
-
-  showNotification(title, message) {
-    chrome.notifications.create({
-      type: 'basic',
-      iconUrl: 'icons/icon128.png',
-      title: title,
-      message: message
-    });
   }
 
   disconnect() {
-    if (this.port) {
-      this.port.disconnect();
-      this.port = null;
-      this.isConnected = false;
-    }
+    this.isConnected = false;
   }
 }

@@ -12,9 +12,19 @@ document.addEventListener('DOMContentLoaded', () => {
   init();
 
   async function init() {
+    await checkConnection();
     await loadStatus();
     await loadLinks();
     setupEventListeners();
+  }
+
+  async function checkConnection() {
+    try {
+      const response = await chrome.runtime.sendMessage({ type: 'CHECK_CONNECTION' });
+      updateConnectionStatus(response?.connected || false);
+    } catch (e) {
+      updateConnectionStatus(false);
+    }
   }
 
   async function loadStatus() {
@@ -33,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateConnectionStatus(connected) {
     if (connected) {
       statusIndicator.classList.remove('disconnected');
-      statusIndicator.querySelector('.text').textContent = 'Connected';
+      statusIndicator.querySelector('.text').textContent = 'Connected to MAC-1';
     } else {
       statusIndicator.classList.add('disconnected');
       statusIndicator.querySelector('.text').textContent = 'Disconnected';
@@ -147,6 +157,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function openApp() {
-    chrome.tabs.create({ url: 'http://127.0.0.1:57575' });
+    chrome.tabs.create({ url: `http://127.0.0.1:57575` });
   }
 });

@@ -14,11 +14,13 @@
     "activeTab",
     "notifications",
     "contextMenus",
-    "webRequestBlocking"
+    "scripting"
   ],
 
   "host_permissions": [
-    "<all_urls>"
+    "<all_urls>",
+    "http://127.0.0.1:57575/*",
+    "http://localhost:57575/*"
   ],
 
   "background": {
@@ -52,9 +54,5 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  },
-
-  "externally_connectable": {
-    "matches": ["http://127.0.0.1:*/*", "http://localhost:*/*"]
   }
 }
