@@ -4,6 +4,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using FontAwesome.WPF;
+using MAC_1.ViewModels;
 
 namespace MAC_1.Views
 {
@@ -16,6 +17,7 @@ namespace MAC_1.Views
         public MainWindow()
         {
             InitializeComponent();
+            DataContext = MainViewModel.Instance;
             NavigateTo(NavDashboard);
         }
 

@@ -21,6 +21,7 @@ namespace MAC_1.ViewModels
         private string _totalSizeDisplay = "0 B";
         private string _diskSpeed = "0 B/s";
         private string _activeCount = "0";
+        private string _activeStatusText = "IDLE";
 
         public int TotalDownloads { get => _totalDownloads; set => SetProperty(ref _totalDownloads, value); }
         public int CompletedDownloads { get => _completedDownloads; set => SetProperty(ref _completedDownloads, value); }
@@ -29,6 +30,7 @@ namespace MAC_1.ViewModels
         public string TotalSizeDisplay { get => _totalSizeDisplay; set => SetProperty(ref _totalSizeDisplay, value); }
         public string DiskSpeed { get => _diskSpeed; set => SetProperty(ref _diskSpeed, value); }
         public string ActiveCount { get => _activeCount; set => SetProperty(ref _activeCount, value); }
+        public string ActiveStatusText { get => _activeStatusText; set => SetProperty(ref _activeStatusText, value); }
 
         private MainViewModel()
         {
@@ -50,6 +52,9 @@ namespace MAC_1.ViewModels
                 FailedDownloads = DataService.Instance.FailedDownloads;
                 TotalSizeDisplay = DownloadTask.FormatSize(DataService.Instance.TotalSizeDownloaded);
                 ActiveCount = DataService.Instance.ActiveDownloads.ToString();
+                ActiveStatusText = DataService.Instance.ActiveDownloads > 0
+                    ? $"DOWNLOADING ({DataService.Instance.ActiveDownloads} FILES ACTIVE)"
+                    : "IDLE";
             });
         }
 

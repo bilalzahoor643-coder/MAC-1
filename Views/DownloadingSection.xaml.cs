@@ -1,5 +1,5 @@
-using System.Windows;
 using System.Windows.Controls;
+using MAC_1.ViewModels;
 
 namespace MAC_1.Views
 {
@@ -8,6 +8,7 @@ namespace MAC_1.Views
         public DownloadingSection()
         {
             InitializeComponent();
+            DataContext = MainViewModel.Instance;
         }
     }
 }

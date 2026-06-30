@@ -67,6 +67,12 @@ namespace MAC_1.Models
             _ => State.ToString()
         };
 
+        public string DownloadedDisplay => FormatSize(DownloadedSize);
+
+        public string ProgressDisplay => Progress.ToString("0.0") + "%";
+
+        public string TimeLeft => string.IsNullOrEmpty(TimeRemaining) ? "--:--" : TimeRemaining;
+
         public static string FormatSize(long bytes)
         {
             if (bytes <= 0) return "0 B";

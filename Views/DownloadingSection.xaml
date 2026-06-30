@@ -149,176 +149,63 @@
                     </StackPanel>
                 </Border>
 
-                <!-- ═══════════════════════════════════════════ -->
-                <!-- CARD 1 - Downloading                        -->
-                <!-- ═══════════════════════════════════════════ -->
-                <Border Background="#FAFBFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="14" Padding="16,14" Margin="0,0,0,10">
-                    <StackPanel>
-                        <!-- Row 1: Icon + Info + Actions -->
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="42"/>
-                                <ColumnDefinition Width="12"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <!-- File type icon -->
-                            <Border Grid.Column="0" Width="42" Height="42" CornerRadius="10" Background="#EFF6FF">
-                                <fa:ImageAwesome Icon="Windows" Width="18" Foreground="#3B82F6" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                            </Border>
-                            <!-- File info -->
-                            <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                                <TextBlock Text="Windows_11_Pro_23H2.iso" FontSize="13" FontWeight="SemiBold" Foreground="#0F172A" TextTrimming="CharacterEllipsis"/>
-                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                    <TextBlock Text="4.2 GB" FontSize="11" Foreground="#64748B"/>
-                                    <TextBlock Text="  ·  " FontSize="11" Foreground="#CBD5E1"/>
-                                    <TextBlock Text="3.15 GB / 4.2 GB" FontSize="11" Foreground="#64748B"/>
-                                    <TextBlock Text="  ·  " FontSize="11" Foreground="#CBD5E1"/>
-                                    <TextBlock Text="23 chunks" FontSize="11" Foreground="#64748B"/>
+                <!-- Downloads List -->
+                <ItemsControl ItemsSource="{Binding Downloads}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="#FAFBFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="14" Padding="16,14" Margin="0,0,0,10">
+                                <StackPanel>
+                                    <!-- Row 1: Icon + Info + Actions -->
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="42"/>
+                                            <ColumnDefinition Width="12"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Width="42" Height="42" CornerRadius="10" Background="#EFF6FF">
+                                            <fa:ImageAwesome Icon="ArrowDown" Width="18" Foreground="#3B82F6" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                        </Border>
+                                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Filename}" FontSize="13" FontWeight="SemiBold" Foreground="#0F172A" TextTrimming="CharacterEllipsis"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                <TextBlock Text="{Binding SizeDisplay}" FontSize="11" Foreground="#64748B"/>
+                                                <TextBlock Text="  ·  " FontSize="11" Foreground="#CBD5E1"/>
+                                                <TextBlock Text="{Binding DownloadedDisplay}" FontSize="11" Foreground="#64748B"/>
+                                                <TextBlock Text="  ·  " FontSize="11" Foreground="#CBD5E1"/>
+                                                <TextBlock Text="{Binding StateText}" FontSize="11" Foreground="#64748B"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Border Width="30" Height="30" CornerRadius="7" Background="#EFF6FF" Cursor="Hand" Margin="0,0,5,0" ToolTip="Pause">
+                                                <fa:ImageAwesome Icon="Pause" Width="11" Foreground="#3B82F6" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                            </Border>
+                                            <Border Width="30" Height="30" CornerRadius="7" Background="#FEF2F2" Cursor="Hand" Margin="0,0,5,0" ToolTip="Remove">
+                                                <fa:ImageAwesome Icon="Trash" Width="11" Foreground="#EF4444" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                            </Border>
+                                            <Border Width="30" Height="30" CornerRadius="7" Background="#F1F5F9" Cursor="Hand" ToolTip="More options">
+                                                <fa:ImageAwesome Icon="EllipsisH" Width="11" Foreground="#64748B" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                            </Border>
+                                        </StackPanel>
+                                    </Grid>
+                                    <!-- Row 2: Progress -->
+                                    <ProgressBar Value="{Binding Progress}" Maximum="100" Style="{StaticResource DownloadProgressBar}" Margin="0,12,0,0"/>
+                                    <!-- Row 3: Speed + ETA + Percent -->
+                                    <Grid Margin="0,7,0,0">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <fa:ImageAwesome Icon="ArrowDown" Width="9" Foreground="#3B82F6" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                            <TextBlock Text="{Binding Speed}" FontSize="11" FontWeight="SemiBold" Foreground="#3B82F6" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding TimeLeft}" FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                            <TextBlock Text="{Binding ProgressDisplay}" FontSize="13" FontWeight="Bold" Foreground="#3B82F6" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Grid>
                                 </StackPanel>
-                            </StackPanel>
-                            <!-- Action buttons -->
-                            <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                                <!-- Pause/Resume toggle -->
-                                <Border Width="30" Height="30" CornerRadius="7" Background="#EFF6FF" Cursor="Hand" Margin="0,0,5,0" ToolTip="Pause">
-                                    <fa:ImageAwesome Icon="Pause" Width="11" Foreground="#3B82F6" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                </Border>
-                                <!-- Delete -->
-                                <Border Width="30" Height="30" CornerRadius="7" Background="#FEF2F2" Cursor="Hand" Margin="0,0,5,0" ToolTip="Remove">
-                                    <fa:ImageAwesome Icon="Trash" Width="11" Foreground="#EF4444" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                </Border>
-                                <!-- More -->
-                                <Border Width="30" Height="30" CornerRadius="7" Background="#F1F5F9" Cursor="Hand" ToolTip="More options">
-                                    <fa:ImageAwesome Icon="EllipsisH" Width="11" Foreground="#64748B" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                </Border>
-                            </StackPanel>
-                        </Grid>
-                        <!-- Row 2: Progress -->
-                        <ProgressBar Value="75" Maximum="100" Style="{StaticResource DownloadProgressBar}" Margin="0,12,0,0"/>
-                        <!-- Row 3: Speed + ETA + Percent -->
-                        <Grid Margin="0,7,0,0">
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <fa:ImageAwesome Icon="ArrowDown" Width="9" Foreground="#3B82F6" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                                <TextBlock Text="2.5 MB/s" FontSize="11" FontWeight="SemiBold" Foreground="#3B82F6" VerticalAlignment="Center"/>
-                                <TextBlock Text="  ·  6 connections" FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center" Margin="4,0,0,0"/>
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                <TextBlock Text="ETA 05:32" FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                <TextBlock Text="75%" FontSize="13" FontWeight="Bold" Foreground="#3B82F6" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Grid>
-                    </StackPanel>
-                </Border>
-
-                <!-- ═══════════════════════════════════════════ -->
-                <!-- CARD 2 - Paused                            -->
-                <!-- ═══════════════════════════════════════════ -->
-                <Border Background="#FAFBFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="14" Padding="16,14" Margin="0,0,0,10">
-                    <StackPanel>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="42"/>
-                                <ColumnDefinition Width="12"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" Width="42" Height="42" CornerRadius="10" Background="#FEF3C7">
-                                <fa:ImageAwesome Icon="Film" Width="18" Foreground="#D97706" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                             </Border>
-                            <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                                <TextBlock Text="The_Batman_2022_4K_UHD.mp4" FontSize="13" FontWeight="SemiBold" Foreground="#0F172A" TextTrimming="CharacterEllipsis"/>
-                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                    <TextBlock Text="8.7 GB" FontSize="11" Foreground="#64748B"/>
-                                    <TextBlock Text="  ·  " FontSize="11" Foreground="#CBD5E1"/>
-                                    <TextBlock Text="2.61 GB / 8.7 GB" FontSize="11" Foreground="#64748B"/>
-                                    <TextBlock Text="  ·  " FontSize="11" Foreground="#CBD5E1"/>
-                                    <TextBlock Text="16 chunks" FontSize="11" Foreground="#64748B"/>
-                                </StackPanel>
-                            </StackPanel>
-                            <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                                <!-- Resume -->
-                                <Border Width="30" Height="30" CornerRadius="7" Background="#F0FDF4" Cursor="Hand" Margin="0,0,5,0" ToolTip="Resume">
-                                    <fa:ImageAwesome Icon="Play" Width="11" Foreground="#16A34A" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                </Border>
-                                <!-- Delete -->
-                                <Border Width="30" Height="30" CornerRadius="7" Background="#FEF2F2" Cursor="Hand" Margin="0,0,5,0" ToolTip="Remove">
-                                    <fa:ImageAwesome Icon="Trash" Width="11" Foreground="#EF4444" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                </Border>
-                                <!-- More -->
-                                <Border Width="30" Height="30" CornerRadius="7" Background="#F1F5F9" Cursor="Hand" ToolTip="More options">
-                                    <fa:ImageAwesome Icon="EllipsisH" Width="11" Foreground="#64748B" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                </Border>
-                            </StackPanel>
-                        </Grid>
-                        <ProgressBar Value="30" Maximum="100" Style="{StaticResource PausedProgressBar}" Margin="0,12,0,0"/>
-                        <Grid Margin="0,7,0,0">
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Border Width="7" Height="7" CornerRadius="4" Background="#F59E0B" Margin="0,0,5,0"/>
-                                <TextBlock Text="Paused" FontSize="11" FontWeight="SemiBold" Foreground="#F59E0B" VerticalAlignment="Center"/>
-                                <TextBlock Text="  ·  4 connections" FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center" Margin="4,0,0,0"/>
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                <TextBlock Text="8 min ago" FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                <TextBlock Text="30%" FontSize="13" FontWeight="Bold" Foreground="#F59E0B" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Grid>
-                    </StackPanel>
-                </Border>
-
-                <!-- ═══════════════════════════════════════════ -->
-                <!-- CARD 3 - Failed / Connecting               -->
-                <!-- ═══════════════════════════════════════════ -->
-                <Border Background="#FAFBFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="14" Padding="16,14">
-                    <StackPanel>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="42"/>
-                                <ColumnDefinition Width="12"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" Width="42" Height="42" CornerRadius="10" Background="#FEF2F2">
-                                <fa:ImageAwesome Icon="Archive" Width="18" Foreground="#EF4444" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                            </Border>
-                            <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                                <TextBlock Text="Adobe_Photoshop_2024.zip" FontSize="13" FontWeight="SemiBold" Foreground="#0F172A" TextTrimming="CharacterEllipsis"/>
-                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                    <TextBlock Text="2.1 GB" FontSize="11" Foreground="#64748B"/>
-                                    <TextBlock Text="  ·  " FontSize="11" Foreground="#CBD5E1"/>
-                                    <TextBlock Text="0 B / 2.1 GB" FontSize="11" Foreground="#64748B"/>
-                                    <TextBlock Text="  ·  " FontSize="11" Foreground="#CBD5E1"/>
-                                    <TextBlock Text="32 chunks" FontSize="11" Foreground="#64748B"/>
-                                </StackPanel>
-                            </StackPanel>
-                            <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                                <!-- Retry -->
-                                <Border Width="30" Height="30" CornerRadius="7" Background="#EFF6FF" Cursor="Hand" Margin="0,0,5,0" ToolTip="Retry">
-                                    <fa:ImageAwesome Icon="RotateRight" Width="11" Foreground="#3B82F6" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                </Border>
-                                <!-- Delete -->
-                                <Border Width="30" Height="30" CornerRadius="7" Background="#FEF2F2" Cursor="Hand" Margin="0,0,5,0" ToolTip="Remove">
-                                    <fa:ImageAwesome Icon="Trash" Width="11" Foreground="#EF4444" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                </Border>
-                                <!-- More -->
-                                <Border Width="30" Height="30" CornerRadius="7" Background="#F1F5F9" Cursor="Hand" ToolTip="More options">
-                                    <fa:ImageAwesome Icon="EllipsisH" Width="11" Foreground="#64748B" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                </Border>
-                            </StackPanel>
-                        </Grid>
-                        <ProgressBar Value="0" Maximum="100" Style="{StaticResource ErrorProgressBar}" Margin="0,12,0,0"/>
-                        <Grid Margin="0,7,0,0">
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Border Width="7" Height="7" CornerRadius="4" Background="#EF4444" Margin="0,0,5,0"/>
-                                <TextBlock Text="Connection failed" FontSize="11" FontWeight="SemiBold" Foreground="#EF4444" VerticalAlignment="Center"/>
-                                <TextBlock Text="  ·  Server timeout" FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center" Margin="4,0,0,0"/>
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                <TextBlock Text="2 min ago" FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                <TextBlock Text="0%" FontSize="13" FontWeight="Bold" Foreground="#EF4444" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Grid>
-                    </StackPanel>
-                </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
 
             </StackPanel>
         </ScrollViewer>

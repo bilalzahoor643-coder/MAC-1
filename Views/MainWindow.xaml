@@ -203,21 +203,17 @@
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                         <Ellipse Width="6" Height="6" Style="{StaticResource BlinkingDotStyle}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                         <TextBlock Text="STATUS:" Style="{StaticResource BottomNavTextStyle}" Foreground="#888"/>
-                        <TextBlock Text="DOWNLOADING (2 FILES ACTIVE)" Style="{StaticResource BottomNavValueStyle}" Foreground="#00AA00"/>
+                        <TextBlock Text="{Binding ActiveStatusText}" Style="{StaticResource BottomNavValueStyle}" Foreground="#00AA00"/>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                         <fa:ImageAwesome Icon="Database" Width="10" Foreground="#AAA" Margin="0,0,5,0"/>
                         <TextBlock Text="DISK:" Style="{StaticResource BottomNavTextStyle}" Foreground="#888"/>
-                        <TextBlock Text="42 MB/s" Style="{StaticResource BottomNavValueStyle}" Foreground="#333"/>
-
-                        <fa:ImageAwesome Icon="Signal" Width="10" Foreground="#AAA" Margin="0,0,5,0"/>
-                        <TextBlock Text="PING:" Style="{StaticResource BottomNavTextStyle}" Foreground="#888"/>
-                        <TextBlock Text="45 ms" Style="{StaticResource BottomNavValueStyle}" Foreground="#333"/>
+                        <TextBlock Text="{Binding DiskSpeed}" Style="{StaticResource BottomNavValueStyle}" Foreground="#333"/>
 
                         <fa:ImageAwesome Icon="Link" Width="10" Foreground="#AAA" Margin="0,0,5,0"/>
                         <TextBlock Text="CONNS:" Style="{StaticResource BottomNavTextStyle}" Foreground="#888"/>
-                        <TextBlock Text="32/32" Style="{StaticResource BottomNavValueStyle}" Foreground="#333"/>
+                        <TextBlock Text="{Binding ActiveCount}" Style="{StaticResource BottomNavValueStyle}" Foreground="#333"/>
 
                         <Button Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="Open Downloads Folder">
                             <fa:ImageAwesome Icon="FolderOpen" Width="14" Foreground="#0077FF" Opacity="0.8"/>
