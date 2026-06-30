@@ -1,74 +1,80 @@
-﻿using System.Collections.ObjectModel;
-using System.Collections.Specialized;
+﻿using System;
+using System.Collections.ObjectModel;
 using System.Linq;
-using MAC_1.Services;
+using System.Windows;
 using MAC_1.Models;
+using MAC_1.Services;
 
 namespace MAC_1.ViewModels
 {
-    /// <summary>
-    /// The main controller for the application dashboard.
-    /// Manages the collection of download cards.
-    /// </summary>
     public class MainViewModel : ViewModelBase
     {
-        // UI (XAML) is collection ko bind karega cards dikhane ke liye
-        public ObservableCollection<DownloadCardViewModel> DownloadCards { get; set; }
+        private static readonly Lazy<MainViewModel> _instance = new(() => new MainViewModel());
+        public static MainViewModel Instance => _instance.Value;
 
-        public MainViewModel()
+        public ObservableCollection<DownloadTask> Downloads => DataService.Instance.Downloads;
+
+        private int _totalDownloads;
+        private int _completedDownloads;
+        private int _activeDownloads;
+        private int _failedDownloads;
+        private string _totalSizeDisplay = "0 B";
+        private string _diskSpeed = "0 B/s";
+        private string _activeCount = "0";
+
+        public int TotalDownloads { get => _totalDownloads; set => SetProperty(ref _totalDownloads, value); }
+        public int CompletedDownloads { get => _completedDownloads; set => SetProperty(ref _completedDownloads, value); }
+        public int ActiveDownloads { get => _activeDownloads; set => SetProperty(ref _activeDownloads, value); }
+        public int FailedDownloads { get => _failedDownloads; set => SetProperty(ref _failedDownloads, value); }
+        public string TotalSizeDisplay { get => _totalSizeDisplay; set => SetProperty(ref _totalSizeDisplay, value); }
+        public string DiskSpeed { get => _diskSpeed; set => SetProperty(ref _diskSpeed, value); }
+        public string ActiveCount { get => _activeCount; set => SetProperty(ref _activeCount, value); }
+
+        private MainViewModel()
         {
-            DownloadCards = new ObservableCollection<DownloadCardViewModel>();
-
-            // IMPORTANT: Hum "DownloadService" mein maujood tasks ko monitor kar rahe hain.
-            // Note: Maine yahan 'DownloadService.Instance' rakha hai kyunke aapki app isi logic par chal rahi hai.
-            DownloadService.Instance.Downloads.CollectionChanged += OnDownloadsChanged;
-
-            // Agar app shuru hote hi pehle se kuch downloads majood hain, unhein cards mein badlein
-            foreach (var task in DownloadService.Instance.Downloads)
+            DataService.Instance.StatsChanged += UpdateStats;
+            DataService.Instance.Downloads.CollectionChanged += (_, _) =>
             {
-                AddCardForTask(task);
-            }
+                Application.Current.Dispatcher.Invoke(UpdateStats);
+            };
+            UpdateStats();
         }
 
-        /// <summary>
-        /// Jab bhi Service mein naya Download add ya remove hoga, ye method trigger hoga.
-        /// </summary>
-        private void OnDownloadsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        private void UpdateStats()
         {
-            if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems != null)
+            Application.Current.Dispatcher.Invoke(() =>
             {
-                foreach (DownloadTask newTask in e.NewItems)
-                {
-                    AddCardForTask(newTask);
-                }
-            }
-            else if (e.Action == NotifyCollectionChangedAction.Remove && e.OldItems != null)
-            {
-                foreach (DownloadTask oldTask in e.OldItems)
-                {
-                    RemoveCardForTask(oldTask);
-                }
-            }
+                TotalDownloads = DataService.Instance.TotalDownloads;
+                CompletedDownloads = DataService.Instance.CompletedDownloads;
+                ActiveDownloads = DataService.Instance.ActiveDownloads;
+                FailedDownloads = DataService.Instance.FailedDownloads;
+                TotalSizeDisplay = DownloadTask.FormatSize(DataService.Instance.TotalSizeDownloaded);
+                ActiveCount = DataService.Instance.ActiveDownloads.ToString();
+            });
         }
 
-        // Helper: Naya UI Card (ViewModel) banane ke liye
-        private void AddCardForTask(DownloadTask task)
+        public ObservableCollection<DownloadTask> GetActiveDownloads()
         {
-            // Ensure duplicate cards na banein
-            if (!DownloadCards.Any(c => c.Task.Id == task.Id))
-            {
-                DownloadCards.Add(new DownloadCardViewModel(task));
-            }
+            return new ObservableCollection<DownloadTask>(
+                Downloads.Where(d => d.State == DownloadState.Downloading || d.State == DownloadState.Paused));
         }
 
-        // Helper: Card ko UI se hatane ke liye
-        private void RemoveCardForTask(DownloadTask task)
+        public ObservableCollection<DownloadTask> GetCompletedDownloads()
         {
-            var card = DownloadCards.FirstOrDefault(c => c.Task.Id == task.Id);
-            if (card != null)
-            {
-                DownloadCards.Remove(card);
-            }
+            return new ObservableCollection<DownloadTask>(
+                Downloads.Where(d => d.State == DownloadState.Completed));
+        }
+
+        public ObservableCollection<DownloadTask> GetQueuedDownloads()
+        {
+            return new ObservableCollection<DownloadTask>(
+                Downloads.Where(d => d.State == DownloadState.Queued || d.State == DownloadState.Waiting));
+        }
+
+        public ObservableCollection<DownloadTask> GetFailedDownloads()
+        {
+            return new ObservableCollection<DownloadTask>(
+                Downloads.Where(d => d.State == DownloadState.Failed));
         }
     }
 }

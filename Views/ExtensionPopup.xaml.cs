@@ -46,7 +46,7 @@ namespace MAC_1.Views
                 if (data != null)
                 {
                     _downloadData = data;
-                    _currentFileSize = data.FileSize ?? 0;
+                    _currentFileSize = data.FileSize;
 
                     // 1. URL Setting (Null safe)
                     UrlTextBox.Text = data.Url ?? string.Empty;
@@ -197,7 +197,7 @@ namespace MAC_1.Views
                 DownloadService.Instance.AddDownload(
                     _downloadData.Url ?? string.Empty,
                     FileNameText.Text,
-                    _downloadData.FileSize ?? 0,
+                    _downloadData.FileSize,
                     SavePathTextBox.Text
                 );
                 this.Close();

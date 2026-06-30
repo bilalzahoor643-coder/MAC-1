@@ -91,12 +91,12 @@ namespace MAC_1.ViewModels
             switch (action)
             {
                 case "Pause":
-                    // Engine pause logic yahan aayegi
+                    DownloadEngine.Instance.PauseDownload(Task);
                     break;
                 case "Resume":
                 case "Start":
                 case "Retry":
-                    await DownloadService.Instance.StartDownloadAsync(Task);
+                    DownloadEngine.Instance.ResumeDownload(Task);
                     break;
                 case "OpenFile":
                     try

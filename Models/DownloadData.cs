@@ -1,19 +1,12 @@
-﻿using System.Text.Json.Serialization;
-
-namespace MAC_1.Models
+﻿namespace MAC_1.Models
 {
     public class DownloadData
     {
-        [JsonPropertyName("url")]
-        public string? Url { get; set; }
-
-        [JsonPropertyName("filename")]
-        public string? Filename { get; set; }
-
-        [JsonPropertyName("fileSize")]
-        public long? FileSize { get; set; }
-
-        [JsonPropertyName("referrer")]
-        public string? Referrer { get; set; }
+        public string Url { get; set; } = string.Empty;
+        public string Filename { get; set; } = string.Empty;
+        public long FileSize { get; set; }
+        public string Referrer { get; set; } = string.Empty;
+        public string MimeType { get; set; } = string.Empty;
+        public string SavePath { get; set; } = string.Empty;
     }
 }

@@ -1,150 +1,47 @@
 ﻿using System;
 using System.Collections.ObjectModel;
-using System.IO;
-using System.Net.Http;
-using System.Threading.Tasks;
 using System.Linq;
 using MAC_1.Models;
 
 namespace MAC_1.Services
 {
-    public class DownloadService : IDownloadService
+    public class DownloadService
     {
         private static readonly DownloadService _instance = new DownloadService();
         public static DownloadService Instance => _instance;
 
-        private readonly HttpClient _httpClient;
-        private readonly DownloadAnalyzer _analyzer;
+        public ObservableCollection<DownloadTask> Downloads => DataService.Instance.Downloads;
 
-        public ObservableCollection<DownloadTask> Downloads { get; set; }
-
-        public DownloadService()
-        {
-            var handler = new HttpClientHandler() { AllowAutoRedirect = true };
-            _httpClient = new HttpClient(handler) { Timeout = TimeSpan.FromHours(4) };
-            _httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-
-            _analyzer = new DownloadAnalyzer();
-            Downloads = new ObservableCollection<DownloadTask>();
-        }
+        private DownloadService() { }
 
         public void AddDownload(string url, string fileName, long fileSize, string savePath)
         {
-            // --- 1. SMART PATH LOGIC ---
-            string finalPath = savePath;
-
-            // Agar rasta khali hai toh user ka Downloads folder uthao
-            if (string.IsNullOrWhiteSpace(finalPath))
+            var data = new DownloadData
             {
-                finalPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-            }
+                Url = url,
+                Filename = fileName,
+                FileSize = fileSize
+            };
 
-            // Check karo ke kya raste ke aakhir mein "MAC_1" pehle se hai?
-            // TrimEnd('\\') isliye taake "C:\Downloads\" aur "C:\Downloads" dono handle hon
-            if (!finalPath.TrimEnd(Path.DirectorySeparatorChar).EndsWith("MAC_1", StringComparison.OrdinalIgnoreCase))
-            {
-                finalPath = Path.Combine(finalPath, "MAC_1");
-            }
+            if (!string.IsNullOrWhiteSpace(savePath))
+                data.SavePath = savePath;
 
-            // Folder create karna agar nahi hai
-            if (!Directory.Exists(finalPath))
-            {
-                Directory.CreateDirectory(finalPath);
-            }
-
-            // --- 2. FILENAME FIX ---
-            if (string.IsNullOrEmpty(fileName) || fileName.ToLower() == "download")
-            {
-                try { fileName = Path.GetFileName(new Uri(url).LocalPath); }
-                catch { fileName = "MAC1_File_" + DateTime.Now.ToString("HHmmss"); }
-            }
-
-            // Naya task finalPath ke saath create karein
-            var newTask = new DownloadTask(url, fileName, fileSize, finalPath);
-            newTask.Cts = new CancellationTokenSource();
-            Downloads.Add(newTask);
-
-            _ = StartDownloadAsync(newTask, newTask.Cts.Token);
-        }
-
-        public async Task StartDownloadAsync(DownloadTask task, CancellationToken token = default)
-        {
-            try
-            {
-                task.State = "Connecting...";
-
-                // Analyzer se asli file ka rasta aur naam mangwayein
-                var analysis = await _analyzer.AnalyzeUrlAsync(task.Url);
-                task.Url = analysis.FinalUrl;
-
-                // Agar analyzer ne behtar naam dhoonda hai toh use update karein
-                if (analysis.FileName != "downloaded_file")
-                    task.Filename = analysis.FileName;
-
-                if (analysis.TotalSize > 0) task.TotalSize = analysis.TotalSize;
-
-                task.State = "Downloading...";
-
-                // Full path for file stream
-                string fullFilePath = Path.Combine(task.SavePath!, task.Filename!);
-
-                using var response = await _httpClient.GetAsync(task.Url, HttpCompletionOption.ResponseHeadersRead, token);
-                response.EnsureSuccessStatusCode();
-
-                using var contentStream = await response.Content.ReadAsStreamAsync(token);
-                using var fileStream = new FileStream(fullFilePath, FileMode.Create, FileAccess.Write, FileShare.None, 16384, true);
-
-                var buffer = new byte[16384];
-                long totalRead = 0;
-                int read;
-
-                while ((read = await contentStream.ReadAsync(buffer, 0, buffer.Length, token)) > 0)
-                {
-                    await fileStream.WriteAsync(buffer, 0, read, token);
-                    totalRead += read;
-
-                    task.DownloadedSize = totalRead;
-                    if (task.TotalSize > 0)
-                        task.Progress = Math.Round((double)totalRead / task.TotalSize * 100, 1);
-
-                    task.Speed = "Streaming...";
-                }
-
-                task.State = "Completed";
-                task.Progress = 100;
-            }
-            catch (OperationCanceledException)
-            {
-                task.State = "Paused";
-            }
-            catch (Exception ex)
-            {
-                task.State = "Error";
-                task.ErrorMessage = ex.Message;
-            }
+            PopupService.Instance.ShowDownloadPopup(data);
         }
 
         public void PauseAll()
         {
-            foreach (var task in Downloads)
+            foreach (var task in Downloads.Where(d => d.State == DownloadState.Downloading))
             {
-                if (task.State == "Downloading..." || task.State == "Connecting...")
-                {
-                    task.Cts?.Cancel();
-                    task.State = "Paused";
-                }
+                DownloadEngine.Instance.PauseDownload(task);
             }
         }
 
         public void ResumeAll()
         {
-            foreach (var task in Downloads)
+            foreach (var task in Downloads.Where(d => d.State == DownloadState.Paused))
             {
-                if (task.State == "Paused")
-                {
-                    task.Cts = new CancellationTokenSource();
-                    _ = StartDownloadAsync(task, task.Cts.Token);
-                }
+                DownloadEngine.Instance.ResumeDownload(task);
             }
         }
     }
