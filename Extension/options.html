@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MAC-1 Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="options-container">
+    <div class="header">
+      <div class="logo">
+        <img src="icons/icon48.png" alt="MAC-1" class="logo-icon">
+        <div class="logo-text">
+          <h1>MAC-1 Extension Settings</h1>
+          <span class="version">v1.0.0</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h2>General</h2>
+      <div class="setting-item">
+        <div class="setting-info">
+          <label>Enable Extension</label>
+          <span class="description">Turn on/off the extension</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="enabled" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <label>Auto Intercept Downloads</label>
+          <span class="description">Automatically capture downloads</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="autoIntercept" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h2>Connection</h2>
+      <div class="setting-item">
+        <div class="setting-info">
+          <label>Port</label>
+          <span class="description">Communication port with desktop app</span>
+        </div>
+        <input type="number" id="port" value="57575" class="setting-input">
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <label>Max Connections</label>
+          <span class="description">Maximum simultaneous downloads</span>
+        </div>
+        <input type="number" id="maxConnections" value="16" min="1" max="64" class="setting-input">
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h2>Data Capture</h2>
+      <div class="setting-item">
+        <div class="setting-info">
+          <label>Capture Headers</label>
+          <span class="description">Capture HTTP request headers</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="captureHeaders" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <label>Capture Cookies</label>
+          <span class="description">Capture browser cookies</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="captureCookies" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <label>Capture POST Data</label>
+          <span class="description">Capture form submission data</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="capturePostData" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <label>Capture Client Hints</label>
+          <span class="description">Capture browser client hints</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="captureClientHints" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h2>File Types</h2>
+      <div class="setting-item full-width">
+        <div class="setting-info">
+          <label>Supported File Types</label>
+          <span class="description">File types to intercept (comma separated)</span>
+        </div>
+        <textarea id="fileTypes" class="setting-textarea" rows="4">exe, msi, dmg, apk, zip, rar, 7z, tar, gz, pdf, doc, docx, xls, xlsx, mp4, mkv, avi, mp3, flac, iso</textarea>
+      </div>
+    </div>
+
+    <div class="footer">
+      <button id="saveBtn" class="save-btn">Save Settings</button>
+      <button id="resetBtn" class="reset-btn">Reset to Default</button>
+    </div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "extName": {
+    "message": "MAC-1 Download Manager",
+    "description": "Extension name"
+  },
+  "extDescription": {
+    "message": "Download files with MAC-1 Download Manager. Captures all browser data for accurate downloads.",
+    "description": "Extension description"
+  }
+}
