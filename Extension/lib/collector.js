@@ -3,6 +3,7 @@ export class Collector {
     this.requestHeaders = new Map();
     this.responseHeaders = new Map();
     this.postData = new Map();
+    this.urlResponseHeaders = new Map();
   }
 
   captureRequestHeaders(details) {
@@ -24,12 +25,21 @@ export class Collector {
     for (const header of details.responseHeaders) {
       headers[header.name.toLowerCase()] = header.value;
     }
+
     this.responseHeaders.set(details.tabId, {
       url: details.url,
       headers: headers,
       statusCode: details.statusCode,
       timestamp: Date.now()
     });
+
+    this.urlResponseHeaders.set(details.url, {
+      headers: headers,
+      statusCode: details.statusCode,
+      timestamp: Date.now()
+    });
+
+    setTimeout(() => this.urlResponseHeaders.delete(details.url), 30000);
   }
 
   capturePostData(details) {
@@ -103,7 +113,6 @@ export class Collector {
       savePath: '',
       category: 'General',
       description: '',
-
       headers: headers,
       responseHeaders: response,
       cookies: cookies,
@@ -116,7 +125,6 @@ export class Collector {
 
   async collectFromTab(tab, url) {
     const tabId = tab?.id;
-
     const [
       headers,
       cookies,
@@ -161,7 +169,6 @@ export class Collector {
       savePath: '',
       category: 'General',
       description: '',
-
       headers: headers,
       responseHeaders: response,
       cookies: cookies,
@@ -222,7 +229,6 @@ export class Collector {
       savePath: '',
       category: 'General',
       description: '',
-
       headers: {
         'user-agent': navigator.userAgent,
         'accept': '*/*',
@@ -248,21 +254,15 @@ export class Collector {
       this.requestHeaders.delete(tabId);
       return stored.headers;
     }
-
-    if (stored && stored.headers) {
-      return stored.headers;
-    }
+    if (stored?.headers) return stored.headers;
 
     return {
       'user-agent': navigator.userAgent,
       'accept': '*/*',
       'accept-language': navigator.language || 'en-US,en;q=0.9',
-      'accept-encoding': 'gzip, deflate, br',
       'sec-fetch-dest': 'document',
       'sec-fetch-mode': 'navigate',
-      'sec-fetch-site': 'none',
-      'sec-fetch-user': '?1',
-      'upgrade-insecure-requests': '1'
+      'sec-fetch-site': 'none'
     };
   }
 
@@ -272,9 +272,14 @@ export class Collector {
       this.responseHeaders.delete(tabId);
       return stored.headers;
     }
-    if (stored && stored.headers) {
-      return stored.headers;
+    if (stored?.headers) return stored.headers;
+
+    const byUrl = this.urlResponseHeaders.get(url);
+    if (byUrl) {
+      this.urlResponseHeaders.delete(url);
+      return byUrl.headers;
     }
+
     return null;
   }
 
@@ -327,8 +332,8 @@ export class Collector {
   }
 
   extractReferrer(tab, headers, originalReferrer) {
-    if (headers && headers.referer) return headers.referer;
-    if (tab && tab.url) return tab.url;
+    if (headers?.referer) return headers.referer;
+    if (tab?.url) return tab.url;
     return originalReferrer || '';
   }
 
@@ -346,13 +351,8 @@ export class Collector {
     }
   }
 
-  async getUserAgent() {
-    return navigator.userAgent;
-  }
-
-  async getPlatform() {
-    return navigator.platform;
-  }
+  async getUserAgent() { return navigator.userAgent; }
+  async getPlatform() { return navigator.platform; }
 
   async getClientHints(tabId) {
     const headers = this.requestHeaders.get(tabId)?.headers || {};
@@ -360,13 +360,10 @@ export class Collector {
     const chHeaders = [
       'sec-ch-ua', 'sec-ch-ua-mobile', 'sec-ch-ua-platform',
       'sec-ch-ua-full-version', 'sec-ch-ua-arch', 'sec-ch-ua-bitness',
-      'sec-ch-ua-form-factors', 'sec-ch-ua-full-version-list',
-      'sec-ch-ua-wow64'
+      'sec-ch-ua-form-factors', 'sec-ch-ua-full-version-list', 'sec-ch-ua-wow64'
     ];
     for (const header of chHeaders) {
-      if (headers[header]) {
-        clientHints[header] = headers[header];
-      }
+      if (headers[header]) clientHints[header] = headers[header];
     }
     return Object.keys(clientHints).length > 0 ? clientHints : null;
   }

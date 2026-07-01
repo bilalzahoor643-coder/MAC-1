@@ -9,6 +9,12 @@
     'iso', 'bin', 'cue', 'img'
   ];
 
+  const DOWNLOAD_KEYWORDS = [
+    'download', 'installer', 'setup', 'install',
+    '.zip', '.rar', '.exe', '.msi', '.dmg', '.deb', '.rpm',
+    '.pdf', '.mp4', '.mp3', '.iso'
+  ];
+
   function getFileExtension(url) {
     try {
       const path = new URL(url).pathname.split('.');
@@ -18,8 +24,7 @@
   }
 
   function isDownloadable(url) {
-    const ext = getFileExtension(url);
-    return ext && DOWNLOAD_TYPES.includes(ext);
+    return DOWNLOAD_TYPES.includes(getFileExtension(url));
   }
 
   function extractFilename(url) {
@@ -54,25 +59,60 @@
 
   const processedUrls = new Set();
 
+  function findDownloadUrl(element) {
+    let el = element;
+
+    for (let i = 0; i < 5 && el; i++) {
+      if (el.tagName === 'A' && el.href) {
+        return { url: el.href, filename: el.download || extractFilename(el.href) };
+      }
+
+      if (el.getAttribute) {
+        const href = el.getAttribute('data-url')
+          || el.getAttribute('data-download')
+          || el.getAttribute('data-href')
+          || el.getAttribute('data-download-url');
+        if (href && (href.startsWith('http') || href.startsWith('/'))) {
+          return { url: new URL(href, window.location.href).href, filename: extractFilename(href) };
+        }
+      }
+
+      el = el.parentElement;
+    }
+    return null;
+  }
+
   document.addEventListener('click', (event) => {
-    const link = event.target.closest('a[href]');
-    if (!link) return;
+    const target = event.target;
 
-    const href = link.href;
-    if (!href || !isDownloadable(href)) return;
+    const link = target.closest('a[href]');
+    if (link && isDownloadable(link.href)) {
+      if (processedUrls.has(link.href)) return;
+      processedUrls.add(link.href);
+      setTimeout(() => processedUrls.delete(link.href), 5000);
 
-    if (processedUrls.has(href)) return;
-    processedUrls.add(href);
-    setTimeout(() => processedUrls.delete(href), 5000);
+      sendToBackground({
+        type: 'INTERCEPT_CLICK',
+        url: link.href,
+        filename: link.download || extractFilename(link.href),
+        tab: getTabInfo()
+      });
+      return;
+    }
 
-    const filename = link.download || extractFilename(href);
+    const downloadInfo = findDownloadUrl(target);
+    if (downloadInfo && isDownloadable(downloadInfo.url)) {
+      if (processedUrls.has(downloadInfo.url)) return;
+      processedUrls.add(downloadInfo.url);
+      setTimeout(() => processedUrls.delete(downloadInfo.url), 5000);
 
-    sendToBackground({
-      type: 'INTERCEPT_CLICK',
-      url: href,
-      filename: filename,
-      tab: getTabInfo()
-    });
+      sendToBackground({
+        type: 'INTERCEPT_CLICK',
+        url: downloadInfo.url,
+        filename: downloadInfo.filename,
+        tab: getTabInfo()
+      });
+    }
   }, true);
 
   function markDownloadLinks(element) {
@@ -117,13 +157,12 @@
       } else if (message.type === 'GET_DOWNLOAD_LINKS') {
         const links = [];
         document.querySelectorAll('a[href]').forEach(link => {
-          const ext = getFileExtension(link.href);
-          if (ext && DOWNLOAD_TYPES.includes(ext)) {
+          if (isDownloadable(link.href)) {
             links.push({
               url: link.href,
               text: link.textContent.trim(),
               filename: link.download || extractFilename(link.href),
-              extension: ext
+              extension: getFileExtension(link.href)
             });
           }
         });
