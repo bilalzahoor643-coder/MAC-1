@@ -14,12 +14,6 @@ namespace MAC_1
             var cardService = CardService.Instance;
             var popupService = PopupService.Instance;
 
-            PipeServer.Instance.DownloadReceived += data =>
-            {
-                Dispatcher.Invoke(() => popupService.ShowDownloadPopup(data));
-            };
-            PipeServer.Instance.Start();
-
             ExtensionService.Instance.DownloadSessionReceived += session =>
             {
                 Dispatcher.Invoke(() => popupService.ShowDownloadPopup(session));
@@ -34,13 +28,18 @@ namespace MAC_1
             {
                 Dispatcher.Invoke(() => popupService.UpdateFileSize(url, fileSize));
             };
+
+            ExtensionService.Instance.StatusChanged += status =>
+            {
+                System.Diagnostics.Debug.WriteLine($"[ExtensionService] {status}");
+            };
+
             ExtensionService.Instance.Start();
         }
 
         protected override void OnExit(ExitEventArgs e)
         {
             ExtensionService.Instance.Stop();
-            PipeServer.Instance.Stop();
             DataService.Instance.SaveHistory();
             base.OnExit(e);
         }
