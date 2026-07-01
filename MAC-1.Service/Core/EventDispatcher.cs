@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 using MAC_1.Service.Models;
@@ -10,20 +11,17 @@ namespace MAC_1.Service.Core
     {
         private readonly EventQueue _queue;
         private readonly Listeners.PipeServer? _pipeServer;
+        private readonly string _logFile;
 
         public EventDispatcher(EventQueue queue, Listeners.PipeServer? pipeServer = null)
         {
             _queue = queue;
             _pipeServer = pipeServer;
-        }
-
-        public void SetPipeServer(Listeners.PipeServer pipeServer)
-        {
-            _pipeServerInternal = pipeServer;
+            _logFile = Path.Combine(AppContext.BaseDirectory, "service-debug.log");
+            File.WriteAllText(_logFile, $"[{DateTime.Now:HH:mm:ss}] Dispatcher initialized\n");
         }
 
         private Listeners.PipeServer? _pipeServerInternal;
-
         private Listeners.PipeServer? Pipe => _pipeServer ?? _pipeServerInternal;
 
         public async Task DispatchAsync(DownloadSession session)
@@ -31,10 +29,21 @@ namespace MAC_1.Service.Core
             _queue.Enqueue(session);
 
             var pipe = Pipe;
-            if (pipe != null && pipe.IsClientConnected)
+            bool connected = pipe?.IsClientConnected ?? false;
+            Log($"Dispatch: filename={session.Filename}, pipe={pipe != null}, connected={connected}");
+
+            if (pipe != null && connected)
             {
-                await pipe.SendDownloadEventAsync(session);
-                Log($"Dispatched to WPF: {session.Filename}");
+                try
+                {
+                    await pipe.SendDownloadEventAsync(session);
+                    _queue.MarkDispatched();
+                    Log($"Dispatched to WPF: {session.Filename}");
+                }
+                catch (Exception ex)
+                {
+                    Log($"Send FAILED: {ex.Message}");
+                }
             }
             else
             {
@@ -69,7 +78,9 @@ namespace MAC_1.Service.Core
 
         private void Log(string message)
         {
-            Console.WriteLine($"[Dispatcher] {message}");
+            var line = $"[{DateTime.Now:HH:mm:ss.fff}] {message}";
+            Console.WriteLine(line);
+            try { File.AppendAllText(_logFile, line + "\n"); } catch { }
         }
     }
 }

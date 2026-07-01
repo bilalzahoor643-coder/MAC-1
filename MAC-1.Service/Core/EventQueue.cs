@@ -34,6 +34,15 @@ namespace MAC_1.Service.Core
             return null;
         }
 
+        public void MarkDispatched()
+        {
+            lock (_lock)
+            {
+                if (_queue.TryDequeue(out var session))
+                    _dispatched.Add(session);
+            }
+        }
+
         public List<DownloadSession> GetAllPending()
         {
             var list = new List<DownloadSession>();

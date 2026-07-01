@@ -14,17 +14,23 @@ namespace MAC_1.Service.Listeners
         private const string PipeName = "MAC-1-Service";
         private CancellationTokenSource? _cts;
         private bool _isRunning;
-        private NamedPipeServerStream? _connectedPipe;
-        private readonly object _pipeLock = new();
+        private NamedPipeServerStream? _server;
+        private BinaryReader? _reader;
+        private BinaryWriter? _writer;
+        private readonly object _lock = new();
+        private readonly string _logFile;
 
         public event Action? ClientConnected;
         public event Action? ClientDisconnected;
+
         public bool IsClientConnected
         {
-            get
-            {
-                lock (_pipeLock) return _connectedPipe?.IsConnected == true;
-            }
+            get { lock (_lock) return _server?.IsConnected == true; }
+        }
+
+        public PipeServer()
+        {
+            _logFile = Path.Combine(AppContext.BaseDirectory, "service-debug.log");
         }
 
         public void Start()
@@ -32,7 +38,7 @@ namespace MAC_1.Service.Listeners
             if (_isRunning) return;
             _cts = new CancellationTokenSource();
             _isRunning = true;
-            _ = AcceptConnectionsAsync(_cts.Token);
+            _ = RunAsync(_cts.Token);
             Log("Pipe server started on: " + PipeName);
         }
 
@@ -40,56 +46,66 @@ namespace MAC_1.Service.Listeners
         {
             _isRunning = false;
             _cts?.Cancel();
-            lock (_pipeLock)
+            lock (_lock)
             {
-                try { _connectedPipe?.Dispose(); } catch { }
-                _connectedPipe = null;
+                try { _reader?.Dispose(); } catch { }
+                try { _writer?.Dispose(); } catch { }
+                try { _server?.Dispose(); } catch { }
+                _reader = null;
+                _writer = null;
+                _server = null;
             }
             Log("Pipe server stopped");
         }
 
-        private async Task AcceptConnectionsAsync(CancellationToken ct)
+        private async Task RunAsync(CancellationToken ct)
         {
             while (!ct.IsCancellationRequested && _isRunning)
             {
+                NamedPipeServerStream? pipe = null;
                 try
                 {
-                    var server = new NamedPipeServerStream(
+                    pipe = new NamedPipeServerStream(
                         PipeName,
                         PipeDirection.InOut,
                         1,
                         PipeTransmissionMode.Byte,
                         PipeOptions.Asynchronous);
 
-                    await server.WaitForConnectionAsync(ct);
+                    await pipe.WaitForConnectionAsync(ct);
                     Log("WPF client connected");
 
-                    lock (_pipeLock)
+                    var reader = new BinaryReader(pipe, Encoding.UTF8, leaveOpen: true);
+                    var writer = new BinaryWriter(pipe, Encoding.UTF8, leaveOpen: true);
+
+                    lock (_lock)
                     {
-                        try { _connectedPipe?.Dispose(); } catch { }
-                        _connectedPipe = server;
+                        try { _server?.Dispose(); } catch { }
+                        try { _reader?.Dispose(); } catch { }
+                        try { _writer?.Dispose(); } catch { }
+                        _server = pipe;
+                        _reader = reader;
+                        _writer = writer;
                     }
 
                     ClientConnected?.Invoke();
-                    _ = MonitorClientAsync(server, ct);
+                    await MonitorClientAsync(pipe, reader, writer, ct);
                 }
                 catch (OperationCanceledException) { break; }
                 catch (IOException) { break; }
                 catch (Exception ex)
                 {
-                    Log($"Accept error: {ex.Message}");
+                    Log($"Error: {ex.Message}");
+                    try { pipe?.Dispose(); } catch { }
                     await Task.Delay(1000, ct).ConfigureAwait(false);
                 }
             }
         }
 
-        private async Task MonitorClientAsync(NamedPipeServerStream pipe, CancellationToken ct)
+        private async Task MonitorClientAsync(NamedPipeServerStream pipe, BinaryReader reader, BinaryWriter writer, CancellationToken ct)
         {
             try
             {
-                using var reader = new BinaryReader(pipe, Encoding.UTF8, leaveOpen: true);
-                using var writer = new BinaryWriter(pipe, Encoding.UTF8, leaveOpen: true);
-
                 while (!ct.IsCancellationRequested && pipe.IsConnected)
                 {
                     try
@@ -110,12 +126,16 @@ namespace MAC_1.Service.Listeners
             catch { }
             finally
             {
-                lock (_pipeLock)
+                lock (_lock)
                 {
-                    if (_connectedPipe == pipe)
+                    if (_server == pipe)
                     {
+                        try { _reader?.Dispose(); } catch { }
+                        try { _writer?.Dispose(); } catch { }
                         try { pipe.Dispose(); } catch { }
-                        _connectedPipe = null;
+                        _server = null;
+                        _reader = null;
+                        _writer = null;
                     }
                 }
                 ClientDisconnected?.Invoke();
@@ -125,17 +145,29 @@ namespace MAC_1.Service.Listeners
 
         public async Task SendToClientAsync(PipeMessage msg)
         {
+            BinaryWriter? writer;
             NamedPipeServerStream? pipe;
-            lock (_pipeLock) { pipe = _connectedPipe; }
+            lock (_lock)
+            {
+                writer = _writer;
+                pipe = _server;
+            }
 
-            if (pipe == null || !pipe.IsConnected) return;
+            if (writer == null || pipe == null || !pipe.IsConnected)
+            {
+                Console.WriteLine($"[PipeServer] SendToClient SKIP: writer={writer != null}, pipe={pipe != null}, connected={pipe?.IsConnected}");
+                return;
+            }
 
             try
             {
-                using var writer = new BinaryWriter(pipe, Encoding.UTF8, leaveOpen: true);
                 await WriteMessageAsync(writer, msg);
+                Console.WriteLine($"[PipeServer] SendToClient OK: {msg.Type}");
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[PipeServer] SendToClient FAIL: {ex.Message}");
+            }
         }
 
         public async Task SendDownloadEventAsync(DownloadSession session)
@@ -178,9 +210,13 @@ namespace MAC_1.Service.Listeners
                 try
                 {
                     byte[] data = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(msg));
-                    writer.Write(data.Length);
-                    writer.Write(data);
-                    writer.Flush();
+                    lock (_lock)
+                    {
+                        if (_writer == null || _server == null || !_server.IsConnected) return;
+                        writer.Write(data.Length);
+                        writer.Write(data);
+                        writer.Flush();
+                    }
                 }
                 catch { }
             });
@@ -188,7 +224,9 @@ namespace MAC_1.Service.Listeners
 
         private void Log(string message)
         {
-            Console.WriteLine($"[PipeServer] {message}");
+            var line = $"[{DateTime.Now:HH:mm:ss.fff}] [PipeServer] {message}";
+            Console.WriteLine(line);
+            try { File.AppendAllText(_logFile, line + "\n"); } catch { }
         }
     }
 }

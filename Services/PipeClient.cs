@@ -86,6 +86,8 @@ namespace MAC_1.Services
                 using var reader = new BinaryReader(pipe, Encoding.UTF8, leaveOpen: true);
                 using var writer = new BinaryWriter(pipe, Encoding.UTF8, leaveOpen: true);
 
+                await WriteMessageAsync(writer, new PipeMessage { Type = "ready" });
+
                 _ = SendHeartbeatsAsync(writer, ct);
 
                 while (!ct.IsCancellationRequested && pipe.IsConnected)
