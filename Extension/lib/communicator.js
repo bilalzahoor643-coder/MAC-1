@@ -6,22 +6,19 @@ export class Communicator {
     this.maxReconnectAttempts = 5;
     this.reconnectDelay = 1000;
     this.messageQueue = [];
-    this._healthCheckTimer = null;
   }
 
   async connect(port) {
-    if (port) {
-      this.baseUrl = `http://127.0.0.1:${port}`;
-    }
-
+    if (port) this.baseUrl = `http://127.0.0.1:${port}`;
     try {
-      const response = await this.healthCheck();
-      if (response && response.status === 'ok') {
+      const response = await fetch(`${this.baseUrl}/api/health`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(3000)
+      });
+      if (response.ok) {
         this.isConnected = true;
         this.reconnectAttempts = 0;
-        console.log('[MAC-1] Connected to desktop app');
         this.sendQueue();
-        this.startHealthCheck();
         return true;
       }
     } catch (e) {
@@ -31,88 +28,47 @@ export class Communicator {
     return false;
   }
 
-  startHealthCheck() {
-    if (this._healthCheckTimer) clearInterval(this._healthCheckTimer);
-    this._healthCheckTimer = setInterval(async () => {
-      try {
-        const response = await this.healthCheck();
-        if (response && response.status === 'ok') {
-          this.isConnected = true;
-        } else {
-          this.isConnected = false;
-        }
-      } catch (e) {
-        this.isConnected = false;
-      }
-    }, 30000);
-  }
-
   attemptReconnect() {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) return;
     this.reconnectAttempts++;
     setTimeout(() => this.connect(), this.reconnectDelay * this.reconnectAttempts);
   }
 
-  async healthCheck() {
-    return await this.request('/api/health', 'GET');
-  }
-
-  async ping() {
-    return await this.request('/api/ping', 'GET');
-  }
-
-  async getStatus() {
-    return await this.request('/api/status', 'GET');
-  }
-
   async sendDownload(downloadData) {
-    try {
-      const response = await this.request('/api/session', 'POST', downloadData);
-      console.log('[MAC-1] Session sent successfully');
-      return response;
-    } catch (e) {
-      console.error('[MAC-1] Session send failed, trying fallback:', e);
-      try {
-        const fallbackResponse = await this.request('/api/download', 'POST', downloadData);
-        return fallbackResponse;
-      } catch (e2) {
-        console.error('[MAC-1] Fallback also failed:', e2);
-        this.messageQueue.push(downloadData);
-        throw e2;
-      }
-    }
-  }
+    const body = JSON.stringify(downloadData);
 
-  async request(path, method, body = null) {
-    const url = `${this.baseUrl}${path}`;
-    const options = {
-      method: method,
-      headers: { 'Content-Type': 'application/json' }
-    };
-    if (body) {
-      options.body = JSON.stringify(body);
+    try {
+      const response = await fetch(`${this.baseUrl}/api/session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: body,
+        signal: AbortSignal.timeout(5000)
+      });
+      if (response.ok) return await response.json();
+    } catch (e) {}
+
+    try {
+      const response = await fetch(`${this.baseUrl}/api/download`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: body,
+        signal: AbortSignal.timeout(5000)
+      });
+      if (response.ok) return await response.json();
+    } catch (e) {
+      this.messageQueue.push(downloadData);
+      throw e;
     }
-    const response = await fetch(url, options);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return await response.json();
   }
 
   sendQueue() {
     while (this.messageQueue.length > 0) {
-      const message = this.messageQueue.shift();
-      this.sendDownload(message).catch(e => {
-        console.error('[MAC-1] Failed to send queued message:', e);
-      });
+      const msg = this.messageQueue.shift();
+      this.sendDownload(msg).catch(() => {});
     }
   }
 
   disconnect() {
     this.isConnected = false;
-    if (this._healthCheckTimer) {
-      clearInterval(this._healthCheckTimer);
-      this._healthCheckTimer = null;
-    }
   }
 }

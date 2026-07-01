@@ -49,10 +49,10 @@
       chrome.runtime.sendMessage(data, () => {
         void chrome.runtime.lastError;
       });
-    } catch (e) {
-      void e;
-    }
+    } catch (e) {}
   }
+
+  const processedUrls = new Set();
 
   document.addEventListener('click', (event) => {
     const link = event.target.closest('a[href]');
@@ -61,12 +61,15 @@
     const href = link.href;
     if (!href || !isDownloadable(href)) return;
 
+    if (processedUrls.has(href)) return;
+    processedUrls.add(href);
+    setTimeout(() => processedUrls.delete(href), 5000);
+
     const filename = link.download || extractFilename(href);
 
     sendToBackground({
-      type: 'DOWNLOAD_URL',
+      type: 'INTERCEPT_CLICK',
       url: href,
-      tabId: null,
       filename: filename,
       tab: getTabInfo()
     });
@@ -78,8 +81,7 @@
       if (element.tagName === 'A' && element.href && isDownloadable(element.href)) {
         element.setAttribute('data-mac1-download', 'true');
       }
-      const links = element.querySelectorAll?.('a[href]');
-      links?.forEach(link => {
+      element.querySelectorAll?.('a[href]')?.forEach(link => {
         if (isDownloadable(link.href)) {
           link.setAttribute('data-mac1-download', 'true');
         }
@@ -93,9 +95,7 @@
       const observer = new MutationObserver((mutations) => {
         for (const mutation of mutations) {
           for (const node of mutation.addedNodes) {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-              markDownloadLinks(node);
-            }
+            if (node.nodeType === Node.ELEMENT_NODE) markDownloadLinks(node);
           }
         }
       });
@@ -103,42 +103,31 @@
     } catch (e) {}
   }
 
-  if (document.body) {
-    startObserver();
-  } else {
-    document.addEventListener('DOMContentLoaded', startObserver);
-  }
+  if (document.body) startObserver();
+  else document.addEventListener('DOMContentLoaded', startObserver);
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     try {
-      switch (message.type) {
-        case 'GET_PAGE_INFO':
-          sendResponse({
-            url: window.location.href,
-            title: document.title,
-            referrer: document.referrer,
-            charset: document.characterSet,
-            language: document.documentElement.lang,
-            links: document.links.length,
-            images: document.images.length
-          });
-          break;
-
-        case 'GET_DOWNLOAD_LINKS':
-          const links = [];
-          document.querySelectorAll('a[href]').forEach(link => {
-            const ext = getFileExtension(link.href);
-            if (ext && DOWNLOAD_TYPES.includes(ext)) {
-              links.push({
-                url: link.href,
-                text: link.textContent.trim(),
-                filename: link.download || extractFilename(link.href),
-                extension: ext
-              });
-            }
-          });
-          sendResponse({ links });
-          break;
+      if (message.type === 'GET_PAGE_INFO') {
+        sendResponse({
+          url: window.location.href,
+          title: document.title,
+          referrer: document.referrer
+        });
+      } else if (message.type === 'GET_DOWNLOAD_LINKS') {
+        const links = [];
+        document.querySelectorAll('a[href]').forEach(link => {
+          const ext = getFileExtension(link.href);
+          if (ext && DOWNLOAD_TYPES.includes(ext)) {
+            links.push({
+              url: link.href,
+              text: link.textContent.trim(),
+              filename: link.download || extractFilename(link.href),
+              extension: ext
+            });
+          }
+        });
+        sendResponse({ links });
       }
     } catch (e) {
       sendResponse({ error: e.message });

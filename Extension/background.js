@@ -7,7 +7,7 @@ class BackgroundService {
     this.communicator = new Communicator();
 
     this.activeDownloads = new Map();
-    this.pendingCancels = new Map();
+    this.sentUrls = new Set();
     this.settings = {
       enabled: true,
       autoIntercept: true,
@@ -20,8 +20,8 @@ class BackgroundService {
       fileTypes: [
         'exe', 'msi', 'dmg', 'apk', 'zip', 'rar', '7z', 'tar', 'gz',
         'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
-        'mp4', 'mkv', 'avi', 'mov', 'wmv', 'flv', 'webm',
-        'mp3', 'flac', 'wav', 'aac', 'ogg',
+        'mp4', 'mkv', 'avi', 'mov', 'wmv', 'flv', 'webm', 'm4v',
+        'mp3', 'flac', 'wav', 'aac', 'ogg', 'wma',
         'iso', 'bin', 'cue', 'img'
       ]
     };
@@ -33,256 +33,191 @@ class BackgroundService {
     await this.loadSettings();
     this.setupEventListeners();
     this.setupContextMenus();
-
-    const connected = await this.communicator.connect(this.settings.port);
-    console.log('[MAC-1] Background service initialized, connected:', connected);
-
+    await this.communicator.connect(this.settings.port);
     this.updateBadge();
   }
 
   async loadSettings() {
     try {
       const stored = await chrome.storage.local.get('settings');
-      if (stored.settings) {
-        this.settings = { ...this.settings, ...stored.settings };
-      }
-    } catch (e) {
-      console.error('[MAC-1] Failed to load settings:', e);
-    }
+      if (stored.settings) this.settings = { ...this.settings, ...stored.settings };
+    } catch (e) {}
   }
 
   async saveSettings() {
     try {
       await chrome.storage.local.set({ settings: this.settings });
-    } catch (e) {
-      console.error('[MAC-1] Failed to save settings:', e);
-    }
+    } catch (e) {}
   }
 
   setupEventListeners() {
-    chrome.downloads.onCreated.addListener((downloadItem) => {
-      this.handleDownloadCreated(downloadItem);
-    });
-
-    chrome.downloads.onChanged.addListener((delta) => {
-      this.handleDownloadChanged(delta);
-    });
+    chrome.downloads.onCreated.addListener((item) => this.handleDownloadCreated(item));
 
     chrome.webRequest.onBeforeSendHeaders.addListener(
-      (details) => this.collector.captureRequestHeaders(details),
+      (d) => this.collector.captureRequestHeaders(d),
       { urls: ['<all_urls>'] },
       ['requestHeaders', 'extraHeaders']
     );
 
     chrome.webRequest.onHeadersReceived.addListener(
-      (details) => this.collector.captureResponseHeaders(details),
+      (d) => this.collector.captureResponseHeaders(d),
       { urls: ['<all_urls>'] },
       ['responseHeaders', 'extraHeaders']
     );
 
     chrome.webRequest.onBeforeRequest.addListener(
-      (details) => this.collector.capturePostData(details),
+      (d) => this.collector.capturePostData(d),
       { urls: ['<all_urls>'] },
       ['requestBody']
     );
 
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      this.handleMessage(message, sender, sendResponse);
+    chrome.runtime.onMessage.addListener((msg, sender, respond) => {
+      this.handleMessage(msg, sender, respond);
       return true;
     });
 
     chrome.storage.onChanged.addListener((changes) => {
-      if (changes.settings) {
-        this.settings = { ...this.settings, ...changes.settings.newValue };
-      }
+      if (changes.settings) this.settings = { ...this.settings, ...changes.settings.newValue };
     });
   }
 
   setupContextMenus() {
-    chrome.contextMenus.create({
-      id: 'mac1-download-link',
-      title: 'Download with MAC-1',
-      contexts: ['link']
-    });
-
-    chrome.contextMenus.create({
-      id: 'mac1-download-page',
-      title: 'Download all links with MAC-1',
-      contexts: ['page']
-    });
-
-    chrome.contextMenus.onClicked.addListener((info, tab) => {
-      this.handleContextMenu(info, tab);
-    });
+    chrome.contextMenus.create({ id: 'mac1-dl-link', title: 'Download with MAC-1', contexts: ['link'] });
+    chrome.contextMenus.create({ id: 'mac1-dl-page', title: 'Download all links with MAC-1', contexts: ['page'] });
+    chrome.contextMenus.onClicked.addListener((info, tab) => this.handleContextMenu(info, tab));
   }
 
-  async handleDownloadCreated(downloadItem) {
-    if (!this.settings.enabled || !this.settings.autoIntercept) {
-      return;
-    }
-
-    const extension = this.getFileExtension(downloadItem.url);
-    if (!this.isDownloadableFileType(extension)) {
-      return;
-    }
-
-    this.pendingCancels.set(downloadItem.id, {
-      url: downloadItem.url,
-      filename: downloadItem.filename,
-      fileSize: downloadItem.fileSize,
-      mime: downloadItem.mime,
-      tabId: downloadItem.tabId,
-      method: downloadItem.method,
-      referrer: downloadItem.referrer,
-      incident: downloadItem.incognito,
-      timestamp: Date.now()
-    });
-
-    this.cancelDownloadFast(downloadItem.id);
-  }
-
-  async cancelDownloadFast(downloadId) {
-    try {
-      await chrome.downloads.cancel(downloadId);
-    } catch (e) {
-      if (!e.message?.includes('No file found')) {
-        console.error('[MAC-1] Cancel error:', e);
-      }
-    }
-
-    const pending = this.pendingCancels.get(downloadId);
-    if (!pending) return;
-    this.pendingCancels.delete(downloadId);
-
-    this.processCapturedDownload(downloadId, pending);
-  }
-
-  handleDownloadChanged(delta) {
-    if (delta.state?.current === 'interrupted' && delta.error?.current) {
-      const pending = this.pendingCancels.get(delta.id);
-      if (pending) {
-        this.pendingCancels.delete(delta.id);
-        this.processCapturedDownload(delta.id, pending);
-      }
-    }
-  }
-
-  async processCapturedDownload(downloadId, info) {
-    const downloadItem = {
-      id: downloadId,
-      url: info.url,
-      filename: info.filename,
-      fileSize: info.fileSize,
-      mime: info.mime,
-      tabId: info.tabId,
-      method: info.method,
-      referrer: info.referrer
-    };
-
-    try {
-      const completeData = await this.collector.collectAllData(downloadItem);
-      this.activeDownloads.set(downloadId, completeData);
-      this.updateBadge();
-
-      this.communicator.sendDownload(completeData).catch(e => {
-        console.error('[MAC-1] Send failed, queuing:', e);
-      });
-
-      this.showNotification(
-        'Download Captured',
-        `${completeData.filename || 'File'} sent to MAC-1`
-      );
-
-    } catch (e) {
-      console.error('[MAC-1] Failed to process download:', e);
-
-      const fallbackData = {
-        url: info.url,
-        filename: info.filename || this.extractFilename(info.url),
-        fileSize: info.fileSize || 0,
-        mimeType: info.mime || '',
-        method: info.method || 'GET',
-        tabId: info.tabId,
-        timestamp: info.timestamp,
-        headers: {},
-        cookies: [],
-        tab: null,
-        response: null,
-        postData: null,
-        clientHints: null,
-        referrer: info.referrer || '',
-        userAgent: navigator.userAgent,
-        platform: navigator.platform
-      };
-
-      this.activeDownloads.set(downloadId, fallbackData);
-      this.updateBadge();
-
-      this.communicator.sendDownload(fallbackData).catch(() => {});
-    }
+  isDownloadableFileType(ext) {
+    return ext && this.settings.fileTypes.includes(ext.toLowerCase());
   }
 
   getFileExtension(url) {
     try {
-      const urlObj = new URL(url);
-      const pathParts = urlObj.pathname.split('.');
-      if (pathParts.length > 1) {
-        return pathParts[pathParts.length - 1].toLowerCase().split('?')[0];
-      }
+      const p = new URL(url).pathname.split('.');
+      if (p.length > 1) return p[p.length - 1].toLowerCase().split('?')[0];
     } catch (e) {}
     return '';
   }
 
   extractFilename(url) {
     try {
-      const urlObj = new URL(url);
-      const pathParts = urlObj.pathname.split('/');
-      const lastPart = pathParts[pathParts.length - 1];
-      if (lastPart && lastPart.includes('.')) {
-        return decodeURIComponent(lastPart);
-      }
+      const parts = new URL(url).pathname.split('/');
+      const name = parts[parts.length - 1];
+      return name && name.includes('.') ? decodeURIComponent(name) : 'download';
     } catch (e) {}
     return 'download';
   }
 
-  isDownloadableFileType(extension) {
-    if (!extension) return false;
-    return this.settings.fileTypes.includes(extension.toLowerCase());
+  hasAlreadySent(url) {
+    if (this.sentUrls.has(url)) return true;
+    this.sentUrls.add(url);
+    setTimeout(() => this.sentUrls.delete(url), 10000);
+    return false;
+  }
+
+  async sendBasicToService(data) {
+    if (this.hasAlreadySent(data.url)) return;
+
+    const session = {
+      url: data.url,
+      finalUrl: data.url,
+      filename: data.filename || this.extractFilename(data.url),
+      fileExtension: this.getFileExtension(data.url),
+      fileSize: 0,
+      mimeType: '',
+      referrer: data.tab?.url || '',
+      origin: '',
+      method: 'GET',
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+      initiator: '',
+      host: '',
+      protocol: '',
+      port: 0,
+      timestamp: Date.now(),
+      downloadSource: 'click-intercept',
+      resumeSupported: true,
+      savePath: '',
+      category: 'General',
+      description: '',
+      headers: {},
+      responseHeaders: null,
+      cookies: [],
+      clientHints: null,
+      postData: null,
+      tab: data.tab || null,
+      redirectChain: []
+    };
+
+    try {
+      await this.communicator.sendDownload(session);
+      this.showNotification('Download Captured', `${session.filename} sent to MAC-1`);
+    } catch (e) {
+      console.error('[MAC-1] Failed to send basic session:', e);
+    }
+  }
+
+  async handleDownloadCreated(downloadItem) {
+    if (!this.settings.enabled || !this.settings.autoIntercept) return;
+
+    const ext = this.getFileExtension(downloadItem.url);
+    if (!this.isDownloadableFileType(ext)) return;
+
+    this.collector.collectAllData(downloadItem).then(async (completeData) => {
+      if (this.hasAlreadySent(completeData.url)) {
+        try { await chrome.downloads.cancel(downloadItem.id); } catch (e) {}
+        return;
+      }
+
+      this.activeDownloads.set(downloadItem.id, completeData);
+      this.updateBadge();
+
+      try { await chrome.downloads.cancel(downloadItem.id); } catch (e) {}
+
+      this.communicator.sendDownload(completeData).catch(() => {});
+
+      this.showNotification('Download Captured', `${completeData.filename || 'File'} sent to MAC-1`);
+    }).catch(async (e) => {
+      console.error('[MAC-1] collectAllData failed:', e);
+      try { await chrome.downloads.cancel(downloadItem.id); } catch (err) {}
+    });
   }
 
   async handleContextMenu(info, tab) {
-    if (info.menuItemId === 'mac1-download-link' && info.linkUrl) {
+    if (info.menuItemId === 'mac1-dl-link' && info.linkUrl) {
       const data = await this.collector.collectFromTab(tab, info.linkUrl);
       this.activeDownloads.set('ctx-' + Date.now(), data);
       this.updateBadge();
       await this.communicator.sendDownload(data);
     }
 
-    if (info.menuItemId === 'mac1-download-page') {
-      const links = await this.getPageLinks(tab);
-      for (const link of links) {
-        const data = await this.collector.collectFromTab(tab, link);
-        await this.communicator.sendDownload(data);
-      }
+    if (info.menuItemId === 'mac1-dl-page') {
+      try {
+        const results = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: () => Array.from(document.querySelectorAll('a[href]')).map(a => a.href)
+        });
+        const links = results[0]?.result || [];
+        for (const link of links) {
+          const ext = this.getFileExtension(link);
+          if (this.isDownloadableFileType(ext)) {
+            const data = await this.collector.collectFromTab(tab, link);
+            await this.communicator.sendDownload(data);
+          }
+        }
+      } catch (e) {}
     }
   }
 
-  async getPageLinks(tab) {
-    try {
-      const results = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: () => Array.from(document.querySelectorAll('a[href]')).map(a => a.href)
-      });
-      return results[0]?.result || [];
-    } catch (e) {
-      return [];
-    }
-  }
-
-  handleMessage(message, sender, sendResponse) {
+  handleMessage(message, sender, respond) {
     switch (message.type) {
+      case 'INTERCEPT_CLICK':
+        this.sendBasicToService(message);
+        respond({ success: true });
+        break;
+
       case 'GET_STATUS':
-        sendResponse({
+        respond({
           enabled: this.settings.enabled,
           activeDownloads: this.activeDownloads.size,
           connected: this.communicator.isConnected
@@ -293,60 +228,32 @@ class BackgroundService {
         this.settings.enabled = !this.settings.enabled;
         this.saveSettings();
         this.updateBadge();
-        sendResponse({ enabled: this.settings.enabled });
+        respond({ enabled: this.settings.enabled });
         break;
 
       case 'DOWNLOAD_URL':
         this.handleManualDownload(message.url, message.tabId);
-        sendResponse({ success: true });
-        break;
-
-      case 'REDIRECT_DOWNLOAD':
-        this.handleRedirectDownload(message.url, sender);
-        sendResponse({ success: true });
+        respond({ success: true });
         break;
 
       case 'GET_SETTINGS':
-        sendResponse({ settings: this.settings });
+        respond({ settings: this.settings });
         break;
 
       case 'UPDATE_SETTINGS':
         this.settings = { ...this.settings, ...message.settings };
         this.saveSettings();
-        sendResponse({ success: true });
+        respond({ success: true });
         break;
 
       case 'CHECK_CONNECTION':
-        this.checkConnection().then(connected => {
-          sendResponse({ connected });
-        });
+        this.communicator.connect(this.settings.port).then(ok => respond({ connected: ok }));
         return true;
 
       case 'DOWNLOAD_COMPLETE':
         this.activeDownloads.delete(message.downloadId);
         this.updateBadge();
         break;
-    }
-  }
-
-  async handleRedirectDownload(url, sender) {
-    try {
-      const data = await this.collector.collectFromUrl(url, sender?.tab);
-      this.activeDownloads.set('redirect-' + Date.now(), data);
-      this.updateBadge();
-      await this.communicator.sendDownload(data);
-      this.showNotification('Download Captured', `${data.filename || 'File'} sent to MAC-1`);
-    } catch (e) {
-      console.error('[MAC-1] Redirect download failed:', e);
-    }
-  }
-
-  async checkConnection() {
-    try {
-      await this.communicator.connect(this.settings.port);
-      return this.communicator.isConnected;
-    } catch (e) {
-      return false;
     }
   }
 
@@ -359,15 +266,12 @@ class BackgroundService {
         const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
         tab = tabs[0];
       }
-
       const data = await this.collector.collectFromTab(tab, url);
       this.activeDownloads.set('manual-' + Date.now(), data);
       this.updateBadge();
       await this.communicator.sendDownload(data);
-      this.showNotification('Download Started', `Sending to MAC-1`);
-    } catch (e) {
-      console.error('[MAC-1] Manual download failed:', e);
-    }
+      this.showNotification('Download Started', 'Sending to MAC-1');
+    } catch (e) {}
   }
 
   updateBadge() {
