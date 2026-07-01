@@ -29,6 +29,11 @@ namespace MAC_1
             {
                 Dispatcher.Invoke(() => popupService.ShowDownloadPopup(data));
             };
+
+            ExtensionService.Instance.SizeUpdateReceived += (url, fileSize) =>
+            {
+                Dispatcher.Invoke(() => popupService.UpdateFileSize(url, fileSize));
+            };
             ExtensionService.Instance.Start();
         }
 

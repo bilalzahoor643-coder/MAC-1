@@ -55,6 +55,7 @@ class BackgroundService {
 
   setupEventListeners() {
     chrome.downloads.onCreated.addListener((item) => this.handleDownloadCreated(item));
+    chrome.downloads.onChanged.addListener((delta) => this.handleDownloadChanged(delta));
 
     chrome.webRequest.onBeforeSendHeaders.addListener(
       (d) => this.collector.captureRequestHeaders(d),
@@ -80,6 +81,9 @@ class BackgroundService {
     chrome.storage.onChanged.addListener((changes) => {
       if (changes.settings) this.settings = { ...this.settings, ...changes.settings.newValue };
     });
+  }
+
+  handleDownloadChanged(delta) {
   }
 
   setupContextMenus() {
@@ -227,8 +231,6 @@ class BackgroundService {
 
     this.markSent(downloadItem.url);
 
-    try { await chrome.downloads.cancel(downloadItem.id); } catch (e) {}
-
     try {
       const completeData = await this.collector.collectAllData(downloadItem);
       this.activeDownloads.set(downloadItem.id, completeData);
@@ -236,21 +238,60 @@ class BackgroundService {
 
       const filename = this.resolveFilename(downloadItem, completeData.responseHeaders);
       const session = this.buildSession(completeData, filename);
-      this.sendToService(session);
+      try { await chrome.downloads.cancel(downloadItem.id); } catch (e) {}
+      await this.sendToService(session);
+      this.scheduleSizeCheck(downloadItem.id, downloadItem.url);
     } catch (e) {
       this.log('collectAllData error:', e.message);
+      try { await chrome.downloads.cancel(downloadItem.id); } catch (e) {}
       const filename = this.resolveFilename(downloadItem, null);
       const session = this.buildSession({
         url: downloadItem.url,
-        fileSize: downloadItem.fileSize,
+        fileSize: downloadItem.fileSize > 0 ? downloadItem.fileSize : 0,
         mimeType: downloadItem.mime,
         tabId: downloadItem.tabId,
         method: downloadItem.method,
         referrer: downloadItem.referrer,
         suggestedFilename: downloadItem.filename
       }, filename);
-      this.sendToService(session);
+      await this.sendToService(session);
+      this.scheduleSizeCheck(downloadItem.id, downloadItem.url);
     }
+  }
+
+  scheduleSizeCheck(downloadId, url) {
+    setTimeout(async () => {
+      try {
+        const results = await chrome.downloads.search({ id: downloadId });
+        if (results && results.length > 0) {
+          const item = results[0];
+          if (item.totalBytes && item.totalBytes > 0) {
+            this.sendSizeUpdate(url, item.totalBytes);
+          }
+        }
+      } catch (e) { this.log('Size check error:', e.message); }
+    }, 1500);
+
+    setTimeout(async () => {
+      try {
+        const results = await chrome.downloads.search({ id: downloadId });
+        if (results && results.length > 0) {
+          const item = results[0];
+          if (item.totalBytes && item.totalBytes > 0) {
+            this.sendSizeUpdate(url, item.totalBytes);
+          }
+        }
+      } catch (e) { this.log('Size check 2 error:', e.message); }
+    }, 4000);
+  }
+
+  sendSizeUpdate(url, fileSize) {
+    if (!this.communicator.isConnected) return;
+    fetch(`http://localhost:${this.settings.port}/api/size-update`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, fileSize })
+    }).catch(() => {});
   }
 
   async handleContextMenu(info, tab) {

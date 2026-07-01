@@ -12,6 +12,7 @@ namespace MAC_1.Services
         public static PopupService Instance => _instance.Value;
 
         private DownloadPopup? _activePopup;
+        private string? _activePopupUrl;
 
         public event Action<DownloadTask>? DownloadStarted;
         public event Action? PopupClosed;
@@ -41,6 +42,7 @@ namespace MAC_1.Services
                 task.CheckIfArchive();
 
                 _activePopup = new DownloadPopup(task, session);
+                _activePopupUrl = session.Url;
                 _activePopup.DownloadStarted += OnDownloadStarted;
                 _activePopup.Closed += (_, _) =>
                 {
@@ -150,6 +152,15 @@ namespace MAC_1.Services
         {
             _activePopup?.Close();
             _activePopup = null;
+            _activePopupUrl = null;
+        }
+
+        public void UpdateFileSize(string url, long fileSize)
+        {
+            if (_activePopup != null && _activePopupUrl == url && fileSize > 0)
+            {
+                _activePopup.UpdateFileSizeFromExtension(fileSize);
+            }
         }
 
         public bool HasActivePopup => _activePopup != null;

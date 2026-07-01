@@ -375,5 +375,14 @@ namespace MAC_1.Views
         }
         private void MinimizeBtn_Click(object sender, RoutedEventArgs e) { this.WindowState = WindowState.Minimized; }
         private void CloseBtn_Click(object sender, RoutedEventArgs e) { _progressTimer?.Stop(); this.Close(); }
+
+        public void UpdateFileSizeFromExtension(long fileSize)
+        {
+            if (fileSize <= 0) return;
+            _task.TotalSize = fileSize;
+            if (_session != null) _session.FileSize = fileSize;
+            FileSizeText.Text = FormatSize(fileSize);
+            InfoFileSize.Text = FormatSize(fileSize);
+        }
     }
 }

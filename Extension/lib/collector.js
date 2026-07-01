@@ -110,7 +110,7 @@ export class Collector {
       this.getRequestHeaders(tabId, url),
       this.getCookies(url),
       this.getTabInfo(tabId),
-      this.getResponseHeaders(tabId, url),
+      this.waitForResponseHeaders(tabId, url, 1500),
       this.getPostData(tabId, url),
       this.getClientHints(tabId),
       this.getUserAgent(),
@@ -122,7 +122,7 @@ export class Collector {
     const filename = downloadItem.filename || this.extractFilenameFromUrl(url);
     const fileExtension = this.getFileExtension(url);
     const contentLength = this.getContentLength(response);
-    const fileSize = contentLength > 0 ? contentLength : (downloadItem.fileSize || 0);
+    const fileSize = contentLength > 0 ? contentLength : (downloadItem.fileSize > 0 ? downloadItem.fileSize : 0);
 
     return {
       url: url,
@@ -130,6 +130,7 @@ export class Collector {
       filename: filename,
       fileExtension: fileExtension,
       fileSize: fileSize,
+      contentLength: contentLength,
       mimeType: downloadItem.mime || '',
       referrer: referrer,
       origin: parsedUrl.origin,
@@ -245,6 +246,16 @@ export class Collector {
     }
     const byUrl = this.urlResponseHeaders.get(url);
     if (byUrl?.headers) return byUrl.headers;
+    return null;
+  }
+
+  async waitForResponseHeaders(tabId, url, timeoutMs = 2000) {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      const headers = this.getResponseHeaders(tabId, url);
+      if (headers) return headers;
+      await new Promise(r => setTimeout(r, 100));
+    }
     return null;
   }
 

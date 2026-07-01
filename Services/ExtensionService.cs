@@ -25,6 +25,7 @@ namespace MAC_1.Services
         public event Action<DownloadSession>? DownloadSessionReceived;
         public event Action<DownloadData>? DownloadReceived;
         public event Action<string>? StatusChanged;
+        public event Action<string, long>? SizeUpdateReceived;
 
         public bool IsRunning => _isRunning;
         public int Port => _port;
@@ -114,6 +115,8 @@ namespace MAC_1.Services
                     await HandleStatusRequest(response);
                 else if (path == "/api/ping" && request.HttpMethod == "GET")
                     await HandlePingResponse(response);
+                else if (path == "/api/size-update" && request.HttpMethod == "POST")
+                    await HandleSizeUpdate(request, response);
                 else
                 {
                     response.StatusCode = 404;
@@ -145,6 +148,34 @@ namespace MAC_1.Services
         private async Task HandlePingResponse(HttpListenerResponse response)
         {
             await WriteResponse(response, new { ping = "pong", timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() });
+        }
+
+        private async Task HandleSizeUpdate(HttpListenerRequest request, HttpListenerResponse response)
+        {
+            try
+            {
+                string body;
+                using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
+                    body = await reader.ReadToEndAsync();
+
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var update = JsonSerializer.Deserialize<SizeUpdateRequest>(body, options);
+
+                if (update != null && !string.IsNullOrEmpty(update.Url) && update.FileSize > 0)
+                {
+                    SizeUpdateReceived?.Invoke(update.Url, update.FileSize);
+                    await WriteResponse(response, new { success = true });
+                    return;
+                }
+
+                response.StatusCode = 400;
+                await WriteResponse(response, new { error = "Invalid size update data" });
+            }
+            catch (Exception ex)
+            {
+                response.StatusCode = 500;
+                await WriteResponse(response, new { error = "Failed to process size update: " + ex.Message });
+            }
         }
 
         private async Task HandleStatusRequest(HttpListenerResponse response)
@@ -312,5 +343,11 @@ namespace MAC_1.Services
         public string? userAgent { get; set; }
         public object? cookies { get; set; }
         public object? headers { get; set; }
+    }
+
+    public class SizeUpdateRequest
+    {
+        public string? Url { get; set; }
+        public long FileSize { get; set; }
     }
 }
