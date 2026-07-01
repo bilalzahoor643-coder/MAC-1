@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
@@ -21,6 +20,8 @@ namespace MAC_1.Views
 
         public event Action<DownloadTask>? DownloadStarted;
 
+        private const string NA = "Not Available";
+
         public DownloadPopup(DownloadTask task, DownloadSession? session = null)
         {
             InitializeComponent();
@@ -28,10 +29,8 @@ namespace MAC_1.Views
             _viewModel = new DownloadViewModel(task);
             _session = session;
 
-            PopulateFileInfo();
+            PopulateAllFields();
             LoadSavedCategories();
-            PopulateInfoCard();
-            PopulateDiskInfo();
 
             task.PropertyChanged += (_, e) =>
             {
@@ -40,48 +39,71 @@ namespace MAC_1.Views
             };
         }
 
-        private void PopulateFileInfo()
+        private string S(string? value, string fallback = "Not Available")
         {
-            FileNameText.Text = _task.Filename;
-            FileSizeText.Text = _task.TotalSize > 0 ? DownloadTask.FormatSize(_task.TotalSize) : "Analyzing...";
-            UrlText.Text = _task.Url;
-            SavePathText.Text = _task.SaveFolder;
-
-            if (_session != null)
-            {
-                if (!string.IsNullOrEmpty(_session.MimeType))
-                    DescriptionBox.Text = $"MIME: {_session.MimeType}";
-
-                if (_session.Tab != null && !string.IsNullOrEmpty(_session.Tab.Title))
-                {
-                    string website = new Uri(_session.Tab.Url).Host;
-                    DescriptionBox.Text = string.IsNullOrEmpty(DescriptionBox.Text)
-                        ? $"Source: {website}"
-                        : $"{DescriptionBox.Text} | Source: {website}";
-                }
-            }
+            return string.IsNullOrWhiteSpace(value) ? fallback : value;
         }
 
-        private void PopulateInfoCard()
+        private string FormatSize(long bytes)
         {
-            if (_session == null) return;
+            return bytes > 0 ? DownloadTask.FormatSize(bytes) : "Not Available";
+        }
 
-            InfoFileSize.Text = _task.TotalSize > 0 ? DownloadTask.FormatSize(_task.TotalSize) : "Unknown";
+        private void PopulateAllFields()
+        {
+            string filename = S(_task.Filename, "Not Available");
+            string url = S(_task.Url, "Not Available");
+            string website = _session?.Website ?? "Not Available";
+            string websiteTitle = _session?.WebsiteTitle ?? "";
+            string mimeType = _session?.MimeType ?? "Not Available";
+            string fileExt = _session?.FileExtension ?? "Not Available";
+            long fileSize = _session?.FileSize ?? _task.TotalSize;
+            string referrer = _session?.Referrer ?? "Not Available";
+            string userAgent = _session?.UserAgent ?? "Not Available";
+            string method = _session?.RequestMethod ?? "Not Available";
+            string source = _session?.DownloadSource ?? "Not Available";
+            bool resumeSupported = _session?.ResumeSupported ?? true;
+
+            FileNameText.Text = filename;
+            FileSizeText.Text = FormatSize(fileSize);
+            UrlText.Text = url;
+            SavePathText.Text = _task.SaveFolder;
+
+            string descParts = "";
+            if (mimeType != NA) descParts += $"MIME: {mimeType}";
+            if (fileExt != NA) descParts += (descParts.Length > 0 ? " | " : "") + $"Type: .{fileExt}";
+            if (website != NA) descParts += (descParts.Length > 0 ? " | " : "") + $"From: {website}";
+            DescriptionBox.Text = descParts;
+
+            PopulateInfoCard(fileSize, resumeSupported, fileExt, mimeType, website, websiteTitle, referrer, method, source, userAgent);
+            PopulateDiskInfo();
+        }
+
+        private void PopulateInfoCard(long fileSize, bool resumeSupported, string fileExt, string mimeType, string website, string websiteTitle, string referrer, string method, string source, string userAgent)
+        {
+            InfoFileSize.Text = FormatSize(fileSize);
 
             int connections = DataService.Instance.Settings.DefaultConnections;
             InfoConnections.Text = connections.ToString();
 
-            if (_task.TotalSize > 0)
+            if (fileSize > 0)
             {
-                long partSize = _task.TotalSize / connections;
+                long partSize = fileSize / connections;
                 InfoParts.Text = connections.ToString();
                 InfoStartPosition.Text = "0 Bytes";
             }
+            else
+            {
+                InfoParts.Text = NA;
+                InfoStartPosition.Text = NA;
+            }
 
-            InfoResumeSupport.Text = _session.ResumeSupported ? "Yes" : "No";
-            InfoResumeSupport.Foreground = _session.ResumeSupported
+            InfoResumeSupport.Text = resumeSupported ? "Yes" : "No";
+            InfoResumeSupport.Foreground = resumeSupported
                 ? (Brush)FindResource("Success")
                 : (Brush)FindResource("TextMuted");
+
+            InfoEstTime.Text = NA;
         }
 
         private void PopulateDiskInfo()
@@ -97,14 +119,14 @@ namespace MAC_1.Views
                 }
                 else
                 {
-                    InfoDiskSpace.Text = "--";
-                    InfoFreeSpace.Text = "--";
+                    InfoDiskSpace.Text = "Not Available";
+                    InfoFreeSpace.Text = "Not Available";
                 }
             }
             catch
             {
-                InfoDiskSpace.Text = "--";
-                InfoFreeSpace.Text = "--";
+                InfoDiskSpace.Text = "Not Available";
+                InfoFreeSpace.Text = "Not Available";
             }
         }
 
@@ -135,6 +157,17 @@ namespace MAC_1.Views
                 }
             }
             catch { }
+
+            for (int i = 0; i < CategoryCombo.Items.Count; i++)
+            {
+                if (((System.Windows.Controls.ComboBoxItem)CategoryCombo.Items[i]).Content.ToString() == _task.Category)
+                {
+                    CategoryCombo.SelectedIndex = i;
+                    break;
+                }
+            }
+            if (CategoryCombo.SelectedIndex < 0 && CategoryCombo.Items.Count > 0)
+                CategoryCombo.SelectedIndex = 0;
         }
 
         private void ShowState1()
@@ -178,9 +211,7 @@ namespace MAC_1.Views
             {
                 switch (_task.State)
                 {
-                    case DownloadState.Downloading:
-                        ShowState2();
-                        break;
+                    case DownloadState.Downloading: ShowState2(); break;
                     case DownloadState.Completed:
                         _progressTimer?.Stop();
                         DownloadProgressBar.Value = 100;
@@ -228,7 +259,7 @@ namespace MAC_1.Views
         private void StartDownload_Click(object sender, RoutedEventArgs e)
         {
             if (CategoryCombo.SelectedItem is System.Windows.Controls.ComboBoxItem selected)
-                _task.Category = selected.Content.ToString() ?? "Compressed";
+                _task.Category = selected.Content.ToString() ?? "General";
 
             _task.SavePath = Path.Combine(
                 DataService.Instance.GetSavePathForCategory(_task.Category),
@@ -248,31 +279,16 @@ namespace MAC_1.Views
 
         private void PauseResume_Click(object sender, RoutedEventArgs e)
         {
-            if (_task.State == DownloadState.Downloading)
-            {
-                _viewModel.Pause();
-                PauseResumeBtn.Content = "RESUME";
-            }
-            else if (_task.State == DownloadState.Paused)
-            {
-                _viewModel.Resume();
-                PauseResumeBtn.Content = "PAUSE";
-            }
+            if (_task.State == DownloadState.Downloading) { _viewModel.Pause(); PauseResumeBtn.Content = "RESUME"; }
+            else if (_task.State == DownloadState.Paused) { _viewModel.Resume(); PauseResumeBtn.Content = "PAUSE"; }
         }
 
         private void Stop_Click(object sender, RoutedEventArgs e)
         {
             _progressTimer?.Stop();
-            var result = MessageBox.Show("Are you sure you want to cancel this download?", "MAC-1", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-            if (result == MessageBoxResult.Yes)
-            {
-                _viewModel.Cancel();
-                this.Close();
-            }
-            else
-            {
-                _progressTimer?.Start();
-            }
+            if (MessageBox.Show("Cancel this download?", "MAC-1", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+            { _viewModel.Cancel(); this.Close(); }
+            else _progressTimer?.Start();
         }
 
         private bool _detailsVisible = true;
@@ -317,10 +333,7 @@ namespace MAC_1.Views
                 try { Process.Start(new ProcessStartInfo(_task.SavePath) { UseShellExecute = true }); }
                 catch (Exception ex) { MessageBox.Show($"Could not open file: {ex.Message}", "MAC-1", MessageBoxButton.OK, MessageBoxImage.Error); }
             }
-            else
-            {
-                MessageBox.Show($"File not found:\n{_task.SavePath}", "MAC-1", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
+            else MessageBox.Show($"File not found:\n{_task.SavePath}", "MAC-1", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void OpenFolder_Click(object sender, RoutedEventArgs e)
@@ -337,15 +350,7 @@ namespace MAC_1.Views
         {
             if (File.Exists(_task.SavePath))
             {
-                try
-                {
-                    Process.Start(new ProcessStartInfo
-                    {
-                        FileName = _task.SavePath,
-                        Verb = "openas",
-                        UseShellExecute = true
-                    });
-                }
+                try { Process.Start(new ProcessStartInfo { FileName = _task.SavePath, Verb = "openas", UseShellExecute = true }); }
                 catch (Exception ex) { MessageBox.Show($"Could not open dialog: {ex.Message}", "MAC-1", MessageBoxButton.OK, MessageBoxImage.Error); }
             }
         }

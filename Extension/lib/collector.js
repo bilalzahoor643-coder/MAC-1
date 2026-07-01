@@ -4,6 +4,7 @@ export class Collector {
     this.responseHeaders = new Map();
     this.postData = new Map();
     this.urlResponseHeaders = new Map();
+    this.urlRequestHeaders = new Map();
   }
 
   captureRequestHeaders(details) {
@@ -17,6 +18,10 @@ export class Collector {
       headers: headers,
       timestamp: Date.now()
     });
+    this.urlRequestHeaders.set(details.url, {
+      headers: headers,
+      timestamp: Date.now()
+    });
   }
 
   captureResponseHeaders(details) {
@@ -25,21 +30,17 @@ export class Collector {
     for (const header of details.responseHeaders) {
       headers[header.name.toLowerCase()] = header.value;
     }
-
     this.responseHeaders.set(details.tabId, {
       url: details.url,
       headers: headers,
       statusCode: details.statusCode,
       timestamp: Date.now()
     });
-
     this.urlResponseHeaders.set(details.url, {
       headers: headers,
       statusCode: details.statusCode,
       timestamp: Date.now()
     });
-
-    setTimeout(() => this.urlResponseHeaders.delete(details.url), 30000);
   }
 
   capturePostData(details) {
@@ -62,19 +63,49 @@ export class Collector {
     }
   }
 
+  parseContentDisposition(cd) {
+    if (!cd) return null;
+    const match = cd.match(/filename\*?=(?:UTF-8''|"?)([^";\s]+)/i);
+    if (match) {
+      let name = match[1].replace(/"/g, '');
+      try { name = decodeURIComponent(name); } catch (e) {}
+      return name;
+    }
+    return null;
+  }
+
+  getContentLength(headers) {
+    if (!headers) return 0;
+    const cl = headers['content-length'];
+    if (cl) {
+      const size = parseInt(cl, 10);
+      return isNaN(size) ? 0 : size;
+    }
+    return 0;
+  }
+
+  getAcceptRanges(headers) {
+    if (!headers) return 'none';
+    const ar = headers['accept-ranges'];
+    return ar || 'none';
+  }
+
+  getETag(headers) {
+    if (!headers) return '';
+    return headers['etag'] || '';
+  }
+
+  getLastModified(headers) {
+    if (!headers) return '';
+    return headers['last-modified'] || '';
+  }
+
   async collectAllData(downloadItem) {
     const tabId = downloadItem.tabId;
     const url = downloadItem.url;
 
     const [
-      headers,
-      cookies,
-      tab,
-      response,
-      postData,
-      clientHints,
-      userAgent,
-      platform
+      headers, cookies, tab, response, postData, clientHints, userAgent, platform
     ] = await Promise.all([
       this.getRequestHeaders(tabId, url),
       this.getCookies(url),
@@ -90,13 +121,15 @@ export class Collector {
     const parsedUrl = this.parseUrl(url);
     const filename = downloadItem.filename || this.extractFilenameFromUrl(url);
     const fileExtension = this.getFileExtension(url);
+    const contentLength = this.getContentLength(response);
+    const fileSize = contentLength > 0 ? contentLength : (downloadItem.fileSize || 0);
 
     return {
       url: url,
       finalUrl: url,
       filename: filename,
       fileExtension: fileExtension,
-      fileSize: downloadItem.fileSize || 0,
+      fileSize: fileSize,
       mimeType: downloadItem.mime || '',
       referrer: referrer,
       origin: parsedUrl.origin,
@@ -119,20 +152,19 @@ export class Collector {
       clientHints: clientHints,
       postData: postData,
       tab: tab,
-      redirectChain: []
+      redirectChain: [],
+      contentDisposition: this.parseContentDisposition(response?.['content-disposition']) || '',
+      acceptRanges: this.getAcceptRanges(response),
+      contentEncoding: response?.['content-encoding'] || '',
+      etag: this.getETag(response),
+      lastModified: this.getLastModified(response)
     };
   }
 
   async collectFromTab(tab, url) {
     const tabId = tab?.id;
     const [
-      headers,
-      cookies,
-      response,
-      postData,
-      clientHints,
-      userAgent,
-      platform
+      headers, cookies, response, postData, clientHints, userAgent, platform
     ] = await Promise.all([
       this.getRequestHeaders(tabId, url),
       this.getCookies(url),
@@ -152,7 +184,7 @@ export class Collector {
       finalUrl: url,
       filename: filename,
       fileExtension: fileExtension,
-      fileSize: 0,
+      fileSize: this.getContentLength(response),
       mimeType: '',
       referrer: tab?.url || '',
       origin: parsedUrl.origin,
@@ -175,87 +207,26 @@ export class Collector {
       clientHints: clientHints,
       postData: postData,
       tab: tab ? {
-        id: tab.id,
-        url: tab.url,
-        title: tab.title,
-        favIconUrl: tab.favIconUrl,
-        windowId: tab.windowId,
-        frameId: 0,
-        active: tab.active,
-        status: tab.status
+        id: tab.id, url: tab.url, title: tab.title, favIconUrl: tab.favIconUrl,
+        windowId: tab.windowId, frameId: 0, active: tab.active, status: tab.status
       } : null,
-      redirectChain: []
-    };
-  }
-
-  async collectFromUrl(url, tab) {
-    const parsedUrl = this.parseUrl(url);
-    const filename = this.extractFilenameFromUrl(url);
-    const fileExtension = this.getFileExtension(url);
-
-    let tabData = null;
-    if (tab) {
-      tabData = {
-        id: tab.id,
-        url: tab.url || '',
-        title: tab.title || '',
-        favIconUrl: tab.favIconUrl || '',
-        windowId: tab.windowId || 0,
-        frameId: 0,
-        active: tab.active || false,
-        status: tab.status || ''
-      };
-    }
-
-    return {
-      url: url,
-      finalUrl: url,
-      filename: filename,
-      fileExtension: fileExtension,
-      fileSize: 0,
-      mimeType: '',
-      referrer: tab?.url || '',
-      origin: parsedUrl.origin,
-      method: 'GET',
-      userAgent: navigator.userAgent,
-      platform: navigator.platform,
-      initiator: '',
-      host: parsedUrl.host,
-      protocol: parsedUrl.protocol,
-      port: parsedUrl.port,
-      timestamp: Date.now(),
-      downloadSource: 'redirect-intercept',
-      resumeSupported: true,
-      savePath: '',
-      category: 'General',
-      description: '',
-      headers: {
-        'user-agent': navigator.userAgent,
-        'accept': '*/*',
-        'accept-language': navigator.language || 'en-US,en;q=0.9',
-        'sec-fetch-dest': 'document',
-        'sec-fetch-mode': 'navigate',
-        'sec-fetch-site': 'none',
-        'sec-fetch-user': '?1',
-        'upgrade-insecure-requests': '1'
-      },
-      responseHeaders: null,
-      cookies: await this.getCookies(url),
-      clientHints: null,
-      postData: null,
-      tab: tabData,
-      redirectChain: []
+      redirectChain: [],
+      contentDisposition: this.parseContentDisposition(response?.['content-disposition']) || '',
+      acceptRanges: this.getAcceptRanges(response),
+      contentEncoding: response?.['content-encoding'] || '',
+      etag: this.getETag(response),
+      lastModified: this.getLastModified(response)
     };
   }
 
   async getRequestHeaders(tabId, url) {
-    const stored = this.requestHeaders.get(tabId);
-    if (stored && stored.url === url) {
+    const byTab = this.requestHeaders.get(tabId);
+    if (byTab?.headers) {
       this.requestHeaders.delete(tabId);
-      return stored.headers;
+      return byTab.headers;
     }
-    if (stored?.headers) return stored.headers;
-
+    const byUrl = this.urlRequestHeaders.get(url);
+    if (byUrl?.headers) return byUrl.headers;
     return {
       'user-agent': navigator.userAgent,
       'accept': '*/*',
@@ -267,25 +238,19 @@ export class Collector {
   }
 
   async getResponseHeaders(tabId, url) {
-    const stored = this.responseHeaders.get(tabId);
-    if (stored && stored.url === url) {
+    const byTab = this.responseHeaders.get(tabId);
+    if (byTab?.headers) {
       this.responseHeaders.delete(tabId);
-      return stored.headers;
+      return byTab.headers;
     }
-    if (stored?.headers) return stored.headers;
-
     const byUrl = this.urlResponseHeaders.get(url);
-    if (byUrl) {
-      this.urlResponseHeaders.delete(url);
-      return byUrl.headers;
-    }
-
+    if (byUrl?.headers) return byUrl.headers;
     return null;
   }
 
   async getPostData(tabId, url) {
     const stored = this.postData.get(tabId);
-    if (stored && stored.url === url) {
+    if (stored?.url === url) {
       this.postData.delete(tabId);
       return stored.data;
     }
@@ -294,18 +259,11 @@ export class Collector {
 
   async getCookies(url) {
     try {
-      const cookies = await chrome.cookies.getAll({ url: url });
-      return cookies.map(cookie => ({
-        name: cookie.name,
-        value: cookie.value,
-        domain: cookie.domain,
-        path: cookie.path,
-        expires: cookie.expirationDate,
-        httpOnly: cookie.httpOnly,
-        secure: cookie.secure,
-        sameSite: cookie.sameSite,
-        hostOnly: cookie.hostOnly,
-        session: cookie.session
+      const cookies = await chrome.cookies.getAll({ url });
+      return cookies.map(c => ({
+        name: c.name, value: c.value, domain: c.domain, path: c.path,
+        expires: c.expirationDate, httpOnly: c.httpOnly, secure: c.secure,
+        sameSite: c.sameSite, hostOnly: c.hostOnly, session: c.session
       }));
     } catch (e) {
       return [];
@@ -317,14 +275,8 @@ export class Collector {
     try {
       const tab = await chrome.tabs.get(tabId);
       return {
-        id: tab.id,
-        url: tab.url,
-        title: tab.title,
-        favIconUrl: tab.favIconUrl,
-        windowId: tab.windowId,
-        frameId: 0,
-        active: tab.active,
-        status: tab.status
+        id: tab.id, url: tab.url, title: tab.title, favIconUrl: tab.favIconUrl,
+        windowId: tab.windowId, frameId: 0, active: tab.active, status: tab.status
       };
     } catch (e) {
       return null;
@@ -339,12 +291,10 @@ export class Collector {
 
   parseUrl(url) {
     try {
-      const parsed = new URL(url);
+      const p = new URL(url);
       return {
-        origin: parsed.origin,
-        host: parsed.host,
-        protocol: parsed.protocol,
-        port: parsed.port ? parseInt(parsed.port) : (parsed.protocol === 'https:' ? 443 : 80)
+        origin: p.origin, host: p.host, protocol: p.protocol,
+        port: p.port ? parseInt(p.port) : (p.protocol === 'https:' ? 443 : 80)
       };
     } catch (e) {
       return { origin: '', host: '', protocol: '', port: 0 };
@@ -356,37 +306,28 @@ export class Collector {
 
   async getClientHints(tabId) {
     const headers = this.requestHeaders.get(tabId)?.headers || {};
-    const clientHints = {};
-    const chHeaders = [
-      'sec-ch-ua', 'sec-ch-ua-mobile', 'sec-ch-ua-platform',
+    const ch = {};
+    for (const h of ['sec-ch-ua', 'sec-ch-ua-mobile', 'sec-ch-ua-platform',
       'sec-ch-ua-full-version', 'sec-ch-ua-arch', 'sec-ch-ua-bitness',
-      'sec-ch-ua-form-factors', 'sec-ch-ua-full-version-list', 'sec-ch-ua-wow64'
-    ];
-    for (const header of chHeaders) {
-      if (headers[header]) clientHints[header] = headers[header];
+      'sec-ch-ua-form-factors', 'sec-ch-ua-full-version-list', 'sec-ch-ua-wow64']) {
+      if (headers[h]) ch[h] = headers[h];
     }
-    return Object.keys(clientHints).length > 0 ? clientHints : null;
+    return Object.keys(ch).length > 0 ? ch : null;
   }
 
   extractFilenameFromUrl(url) {
     try {
-      const urlObj = new URL(url);
-      const pathParts = urlObj.pathname.split('/');
-      const lastPart = pathParts[pathParts.length - 1];
-      if (lastPart && lastPart.includes('.')) {
-        return decodeURIComponent(lastPart);
-      }
+      const parts = new URL(url).pathname.split('/');
+      const last = parts[parts.length - 1];
+      if (last && last.includes('.')) return decodeURIComponent(last);
     } catch (e) {}
     return 'download';
   }
 
   getFileExtension(url) {
     try {
-      const urlObj = new URL(url);
-      const pathParts = urlObj.pathname.split('.');
-      if (pathParts.length > 1) {
-        return pathParts[pathParts.length - 1].toLowerCase().split('?')[0];
-      }
+      const parts = new URL(url).pathname.split('.');
+      if (parts.length > 1) return parts[parts.length - 1].toLowerCase().split('?')[0];
     } catch (e) {}
     return '';
   }

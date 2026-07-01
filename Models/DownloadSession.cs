@@ -8,6 +8,7 @@ namespace MAC_1.Models
         public string Url { get; set; } = string.Empty;
         public string FinalUrl { get; set; } = string.Empty;
         public string Filename { get; set; } = string.Empty;
+        public string SuggestedFilename { get; set; } = string.Empty;
         public string FileExtension { get; set; } = string.Empty;
         public long FileSize { get; set; }
         public string MimeType { get; set; } = string.Empty;
@@ -22,10 +23,19 @@ namespace MAC_1.Models
         public int Port { get; set; }
         public long Timestamp { get; set; }
         public string DownloadSource { get; set; } = "browser";
-        public bool ResumeSupported { get; set; }
+        public bool ResumeSupported { get; set; } = true;
         public string SavePath { get; set; } = string.Empty;
         public string Category { get; set; } = "General";
         public string Description { get; set; } = string.Empty;
+        public string Website { get; set; } = string.Empty;
+        public string WebsiteTitle { get; set; } = string.Empty;
+        public string ContentDisposition { get; set; } = string.Empty;
+        public int StatusCode { get; set; }
+        public string ContentLength { get; set; } = string.Empty;
+        public string AcceptRanges { get; set; } = string.Empty;
+        public string ContentEncoding { get; set; } = string.Empty;
+        public string ETag { get; set; } = string.Empty;
+        public string LastModified { get; set; } = string.Empty;
 
         public Dictionary<string, string> Headers { get; set; } = new();
         public Dictionary<string, string>? ResponseHeaders { get; set; }
