@@ -122,7 +122,7 @@
                                      x:Name="DescriptionBox"/>
                         </StackPanel>
 
-                        <!-- RIGHT INFO CARD -->
+                            <!-- RIGHT INFO CARD -->
                         <Border Grid.Column="2" Style="{StaticResource FileInfoCardStyle}" VerticalAlignment="Top">
                             <StackPanel>
                                 <Border Width="48" Height="48" CornerRadius="10" Background="White" BorderBrush="{StaticResource CardBorder}" BorderThickness="1" HorizontalAlignment="Center" Margin="0,0,0,8">
@@ -130,36 +130,36 @@
                                 </Border>
                                 <Grid Margin="0,0,0,5">
                                     <TextBlock Text="File Size:" FontSize="11" Foreground="{StaticResource TextSecondary}"/>
-                                    <TextBlock Text="1.64 GB" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right"/>
+                                    <TextBlock x:Name="InfoFileSize" Text="Analyzing..." FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right"/>
                                 </Grid>
                                 <Grid Margin="0,0,0,5">
                                     <TextBlock Text="Disk Space:" FontSize="11" Foreground="{StaticResource TextSecondary}"/>
-                                    <TextBlock Text="78.32 GB" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right"/>
+                                    <TextBlock x:Name="InfoDiskSpace" Text="--" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right"/>
                                 </Grid>
                                 <Grid Margin="0,0,0,5">
                                     <TextBlock Text="Free Space:" FontSize="11" Foreground="{StaticResource TextSecondary}"/>
-                                    <TextBlock Text="56.71 GB" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right"/>
+                                    <TextBlock x:Name="InfoFreeSpace" Text="--" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right"/>
                                 </Grid>
                                 <Border Height="1" Background="{StaticResource CardBorder}" Margin="0,3,0,6"/>
                                 <Grid Margin="0,0,0,5">
                                     <TextBlock Text="Connections:" FontSize="11" Foreground="{StaticResource TextSecondary}"/>
-                                    <TextBlock Text="16" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Accent}" HorizontalAlignment="Right"/>
+                                    <TextBlock x:Name="InfoConnections" Text="16" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Accent}" HorizontalAlignment="Right"/>
                                 </Grid>
                                 <Grid Margin="0,0,0,5">
                                     <TextBlock Text="Start Position:" FontSize="11" Foreground="{StaticResource TextSecondary}"/>
-                                    <TextBlock Text="0 Bytes" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right"/>
+                                    <TextBlock x:Name="InfoStartPosition" Text="0 Bytes" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right"/>
                                 </Grid>
                                 <Grid Margin="0,0,0,5">
                                     <TextBlock Text="Parts:" FontSize="11" Foreground="{StaticResource TextSecondary}"/>
-                                    <TextBlock Text="32" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right"/>
+                                    <TextBlock x:Name="InfoParts" Text="--" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right"/>
                                 </Grid>
                                 <Grid Margin="0,0,0,5">
                                     <TextBlock Text="Est. Time:" FontSize="11" Foreground="{StaticResource TextSecondary}"/>
-                                    <TextBlock Text="3m 42s" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right"/>
+                                    <TextBlock x:Name="InfoEstTime" Text="--" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Right"/>
                                 </Grid>
                                 <Grid>
                                     <TextBlock Text="Resume Support:" FontSize="11" Foreground="{StaticResource TextSecondary}"/>
-                                    <TextBlock Text="Yes" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Success}" HorizontalAlignment="Right"/>
+                                    <TextBlock x:Name="InfoResumeSupport" Text="Yes" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Success}" HorizontalAlignment="Right"/>
                                 </Grid>
                             </StackPanel>
                         </Border>

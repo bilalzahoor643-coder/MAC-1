@@ -6,6 +6,7 @@ export class Communicator {
     this.maxReconnectAttempts = 5;
     this.reconnectDelay = 1000;
     this.messageQueue = [];
+    this._healthCheckTimer = null;
   }
 
   async connect(port) {
@@ -18,30 +19,38 @@ export class Communicator {
       if (response && response.status === 'ok') {
         this.isConnected = true;
         this.reconnectAttempts = 0;
-        console.log('[MAC-1] Connected to desktop app:', response);
+        console.log('[MAC-1] Connected to desktop app');
         this.sendQueue();
+        this.startHealthCheck();
         return true;
       }
     } catch (e) {
-      console.log('[MAC-1] Connection failed, will retry...');
       this.isConnected = false;
       this.attemptReconnect();
     }
     return false;
   }
 
+  startHealthCheck() {
+    if (this._healthCheckTimer) clearInterval(this._healthCheckTimer);
+    this._healthCheckTimer = setInterval(async () => {
+      try {
+        const response = await this.healthCheck();
+        if (response && response.status === 'ok') {
+          this.isConnected = true;
+        } else {
+          this.isConnected = false;
+        }
+      } catch (e) {
+        this.isConnected = false;
+      }
+    }, 30000);
+  }
+
   attemptReconnect() {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.log('[MAC-1] Max reconnect attempts reached');
-      return;
-    }
-
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) return;
     this.reconnectAttempts++;
-    console.log(`[MAC-1] Reconnecting... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-
-    setTimeout(() => {
-      this.connect();
-    }, this.reconnectDelay * this.reconnectAttempts);
+    setTimeout(() => this.connect(), this.reconnectDelay * this.reconnectAttempts);
   }
 
   async healthCheck() {
@@ -57,52 +66,36 @@ export class Communicator {
   }
 
   async sendDownload(downloadData) {
-    const message = {
-      url: downloadData.url,
-      filename: downloadData.filename,
-      fileSize: downloadData.fileSize,
-      referrer: downloadData.referrer,
-      mimeType: downloadData.mimeType,
-      savePath: downloadData.savePath,
-      userAgent: downloadData.userAgent,
-      cookies: downloadData.cookies,
-      headers: downloadData.headers,
-      tab: downloadData.tab,
-      clientHints: downloadData.clientHints,
-      timestamp: Date.now()
-    };
-
     try {
-      const response = await this.request('/api/download', 'POST', message);
-      console.log('[MAC-1] Download sent:', response);
+      const response = await this.request('/api/session', 'POST', downloadData);
+      console.log('[MAC-1] Session sent successfully');
       return response;
     } catch (e) {
-      console.error('[MAC-1] Failed to send download:', e);
-      this.messageQueue.push(message);
-      throw e;
+      console.error('[MAC-1] Session send failed, trying fallback:', e);
+      try {
+        const fallbackResponse = await this.request('/api/download', 'POST', downloadData);
+        return fallbackResponse;
+      } catch (e2) {
+        console.error('[MAC-1] Fallback also failed:', e2);
+        this.messageQueue.push(downloadData);
+        throw e2;
+      }
     }
   }
 
   async request(path, method, body = null) {
     const url = `${this.baseUrl}${path}`;
-
     const options = {
       method: method,
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      headers: { 'Content-Type': 'application/json' }
     };
-
     if (body) {
       options.body = JSON.stringify(body);
     }
-
     const response = await fetch(url, options);
-
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-
     return await response.json();
   }
 
@@ -117,5 +110,9 @@ export class Communicator {
 
   disconnect() {
     this.isConnected = false;
+    if (this._healthCheckTimer) {
+      clearInterval(this._healthCheckTimer);
+      this._healthCheckTimer = null;
+    }
   }
 }

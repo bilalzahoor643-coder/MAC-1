@@ -20,6 +20,11 @@ namespace MAC_1
             };
             PipeServer.Instance.Start();
 
+            ExtensionService.Instance.DownloadSessionReceived += session =>
+            {
+                Dispatcher.Invoke(() => popupService.ShowDownloadPopup(session));
+            };
+
             ExtensionService.Instance.DownloadReceived += data =>
             {
                 Dispatcher.Invoke(() => popupService.ShowDownloadPopup(data));

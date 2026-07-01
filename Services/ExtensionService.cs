@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -20,8 +22,9 @@ namespace MAC_1.Services
         private bool _isRunning;
         private readonly int _port = 57575;
 
-        public event Action<DownloadData> DownloadReceived;
-        public event Action<string> StatusChanged;
+        public event Action<DownloadSession>? DownloadSessionReceived;
+        public event Action<DownloadData>? DownloadReceived;
+        public event Action<string>? StatusChanged;
 
         public bool IsRunning => _isRunning;
         public int Port => _port;
@@ -72,14 +75,8 @@ namespace MAC_1.Services
                     var context = await _listener.GetContextAsync();
                     _ = HandleRequestAsync(context);
                 }
-                catch (HttpListenerException)
-                {
-                    break;
-                }
-                catch (ObjectDisposedException)
-                {
-                    break;
-                }
+                catch (HttpListenerException) { break; }
+                catch (ObjectDisposedException) { break; }
                 catch (Exception ex)
                 {
                     StatusChanged?.Invoke("Error: " + ex.Message);
@@ -108,21 +105,15 @@ namespace MAC_1.Services
                 string path = request.Url.AbsolutePath.ToLower();
 
                 if (path == "/api/health" && request.HttpMethod == "GET")
-                {
                     await HandleHealthCheck(response);
-                }
                 else if (path == "/api/download" && request.HttpMethod == "POST")
-                {
                     await HandleDownloadRequest(request, response);
-                }
+                else if (path == "/api/session" && request.HttpMethod == "POST")
+                    await HandleSessionRequest(request, response);
                 else if (path == "/api/status" && request.HttpMethod == "GET")
-                {
                     await HandleStatusRequest(response);
-                }
                 else if (path == "/api/ping" && request.HttpMethod == "GET")
-                {
                     await HandlePingResponse(response);
-                }
                 else
                 {
                     response.StatusCode = 404;
@@ -142,32 +133,67 @@ namespace MAC_1.Services
 
         private async Task HandleHealthCheck(HttpListenerResponse response)
         {
-            var health = new
+            await WriteResponse(response, new
             {
                 status = "ok",
                 service = "MAC-1 Download Manager",
                 version = "1.0.0",
                 timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-            };
-            await WriteResponse(response, health);
+            });
         }
 
         private async Task HandlePingResponse(HttpListenerResponse response)
         {
-            var ping = new { ping = "pong", timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() };
-            await WriteResponse(response, ping);
+            await WriteResponse(response, new { ping = "pong", timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() });
         }
 
         private async Task HandleStatusRequest(HttpListenerResponse response)
         {
-            var status = new
+            await WriteResponse(response, new
             {
                 downloads = DataService.Instance.TotalDownloads,
                 active = DataService.Instance.ActiveDownloads,
                 completed = DataService.Instance.CompletedDownloads,
                 failed = DataService.Instance.FailedDownloads
-            };
-            await WriteResponse(response, status);
+            });
+        }
+
+        private async Task HandleSessionRequest(HttpListenerRequest request, HttpListenerResponse response)
+        {
+            try
+            {
+                string body;
+                using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
+                    body = await reader.ReadToEndAsync();
+
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+
+                var session = JsonSerializer.Deserialize<DownloadSession>(body, options);
+
+                if (session == null || string.IsNullOrEmpty(session.Url))
+                {
+                    response.StatusCode = 400;
+                    await WriteResponse(response, new { error = "Invalid session data" });
+                    return;
+                }
+
+                DownloadSessionReceived?.Invoke(session);
+
+                await WriteResponse(response, new
+                {
+                    success = true,
+                    message = "Session received",
+                    sessionId = Guid.NewGuid().ToString("N")[..8]
+                });
+            }
+            catch (Exception ex)
+            {
+                response.StatusCode = 500;
+                await WriteResponse(response, new { error = "Failed to process session: " + ex.Message });
+            }
         }
 
         private async Task HandleDownloadRequest(HttpListenerRequest request, HttpListenerResponse response)
@@ -176,14 +202,34 @@ namespace MAC_1.Services
             {
                 string body;
                 using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
-                {
                     body = await reader.ReadToEndAsync();
-                }
 
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var downloadData = JsonSerializer.Deserialize<ExtensionDownloadRequest>(body, options);
 
-                if (downloadData == null || string.IsNullOrEmpty(downloadData.url))
+                DownloadSession? session = null;
+                ExtensionDownloadRequest? legacy = null;
+
+                try
+                {
+                    session = JsonSerializer.Deserialize<DownloadSession>(body, options);
+                }
+                catch { }
+
+                if (session != null && !string.IsNullOrEmpty(session.Url))
+                {
+                    DownloadSessionReceived?.Invoke(session);
+                    await WriteResponse(response, new
+                    {
+                        success = true,
+                        message = "Download received",
+                        downloadId = Guid.NewGuid().ToString("N")[..8]
+                    });
+                    return;
+                }
+
+                legacy = JsonSerializer.Deserialize<ExtensionDownloadRequest>(body, options);
+
+                if (legacy == null || string.IsNullOrEmpty(legacy.url))
                 {
                     response.StatusCode = 400;
                     await WriteResponse(response, new { error = "Invalid download data" });
@@ -192,23 +238,22 @@ namespace MAC_1.Services
 
                 var data = new DownloadData
                 {
-                    Url = downloadData.url,
-                    Filename = downloadData.filename ?? "",
-                    FileSize = downloadData.fileSize ?? 0,
-                    Referrer = downloadData.referrer ?? "",
-                    MimeType = downloadData.mimeType ?? "",
-                    SavePath = downloadData.savePath ?? ""
+                    Url = legacy.url,
+                    Filename = legacy.filename ?? "",
+                    FileSize = legacy.fileSize ?? 0,
+                    Referrer = legacy.referrer ?? "",
+                    MimeType = legacy.mimeType ?? "",
+                    SavePath = legacy.savePath ?? ""
                 };
 
                 DownloadReceived?.Invoke(data);
 
-                var result = new
+                await WriteResponse(response, new
                 {
                     success = true,
                     message = "Download received",
                     downloadId = Guid.NewGuid().ToString("N")[..8]
-                };
-                await WriteResponse(response, result);
+                });
             }
             catch (Exception ex)
             {

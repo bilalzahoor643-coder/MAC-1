@@ -16,18 +16,22 @@ namespace MAC_1.Views
     {
         private readonly DownloadTask _task;
         private readonly DownloadViewModel _viewModel;
+        private readonly DownloadSession? _session;
         private DispatcherTimer? _progressTimer;
 
         public event Action<DownloadTask>? DownloadStarted;
 
-        public DownloadPopup(DownloadTask task)
+        public DownloadPopup(DownloadTask task, DownloadSession? session = null)
         {
             InitializeComponent();
             _task = task;
             _viewModel = new DownloadViewModel(task);
+            _session = session;
 
             PopulateFileInfo();
             LoadSavedCategories();
+            PopulateInfoCard();
+            PopulateDiskInfo();
 
             task.PropertyChanged += (_, e) =>
             {
@@ -41,46 +45,98 @@ namespace MAC_1.Views
             FileNameText.Text = _task.Filename;
             FileSizeText.Text = _task.TotalSize > 0 ? DownloadTask.FormatSize(_task.TotalSize) : "Analyzing...";
             UrlText.Text = _task.Url;
-            SavePathText.Text = DataService.Instance.GetSavePathForCategory(_task.Category);
+            SavePathText.Text = _task.SaveFolder;
 
-            foreach (var cat in DataService.Instance.Categories)
-                CategoryCombo.Items.Add(new System.Windows.Controls.ComboBoxItem { Content = cat.Name });
-
-            for (int i = 0; i < CategoryCombo.Items.Count; i++)
+            if (_session != null)
             {
-                if (((System.Windows.Controls.ComboBoxItem)CategoryCombo.Items[i]).Content.ToString() == _task.Category)
+                if (!string.IsNullOrEmpty(_session.MimeType))
+                    DescriptionBox.Text = $"MIME: {_session.MimeType}";
+
+                if (_session.Tab != null && !string.IsNullOrEmpty(_session.Tab.Title))
                 {
-                    CategoryCombo.SelectedIndex = i;
-                    break;
+                    string website = new Uri(_session.Tab.Url).Host;
+                    DescriptionBox.Text = string.IsNullOrEmpty(DescriptionBox.Text)
+                        ? $"Source: {website}"
+                        : $"{DescriptionBox.Text} | Source: {website}";
                 }
             }
-            if (CategoryCombo.SelectedIndex < 0 && CategoryCombo.Items.Count > 0)
-                CategoryCombo.SelectedIndex = 0;
+        }
 
-            ShowState1();
+        private void PopulateInfoCard()
+        {
+            if (_session == null) return;
+
+            InfoFileSize.Text = _task.TotalSize > 0 ? DownloadTask.FormatSize(_task.TotalSize) : "Unknown";
+
+            int connections = DataService.Instance.Settings.DefaultConnections;
+            InfoConnections.Text = connections.ToString();
+
+            if (_task.TotalSize > 0)
+            {
+                long partSize = _task.TotalSize / connections;
+                InfoParts.Text = connections.ToString();
+                InfoStartPosition.Text = "0 Bytes";
+            }
+
+            InfoResumeSupport.Text = _session.ResumeSupported ? "Yes" : "No";
+            InfoResumeSupport.Foreground = _session.ResumeSupported
+                ? (Brush)FindResource("Success")
+                : (Brush)FindResource("TextMuted");
+        }
+
+        private void PopulateDiskInfo()
+        {
+            try
+            {
+                string savePath = _task.SaveFolder;
+                if (!string.IsNullOrEmpty(savePath) && Directory.Exists(savePath))
+                {
+                    var driveInfo = new DriveInfo(savePath);
+                    InfoDiskSpace.Text = DownloadTask.FormatSize(driveInfo.TotalSize);
+                    InfoFreeSpace.Text = DownloadTask.FormatSize(driveInfo.AvailableFreeSpace);
+                }
+                else
+                {
+                    InfoDiskSpace.Text = "--";
+                    InfoFreeSpace.Text = "--";
+                }
+            }
+            catch
+            {
+                InfoDiskSpace.Text = "--";
+                InfoFreeSpace.Text = "--";
+            }
         }
 
         private void LoadSavedCategories()
         {
-            foreach (var name in System.IO.File.ReadAllLines(
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MAC-1", "categories.txt")))
+            string categoriesFile = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "MAC-1", "categories.txt");
+
+            if (!File.Exists(categoriesFile)) return;
+
+            try
             {
-                var trimmed = name.Trim();
-                if (!string.IsNullOrWhiteSpace(trimmed))
+                foreach (var name in File.ReadAllLines(categoriesFile))
                 {
-                    bool exists = false;
-                    foreach (var item in CategoryCombo.Items)
+                    var trimmed = name.Trim();
+                    if (!string.IsNullOrWhiteSpace(trimmed))
                     {
-                        if (((System.Windows.Controls.ComboBoxItem)item).Content.ToString() == trimmed)
-                        { exists = true; break; }
+                        bool exists = false;
+                        foreach (var item in CategoryCombo.Items)
+                        {
+                            if (((System.Windows.Controls.ComboBoxItem)item).Content.ToString() == trimmed)
+                            { exists = true; break; }
+                        }
+                        if (!exists)
+                            CategoryCombo.Items.Add(new System.Windows.Controls.ComboBoxItem { Content = trimmed });
                     }
-                    if (!exists)
-                        CategoryCombo.Items.Add(new System.Windows.Controls.ComboBoxItem { Content = trimmed });
                 }
             }
+            catch { }
         }
 
-        // STATE MANAGEMENT
         private void ShowState1()
         {
             State1Panel.Visibility = Visibility.Visible;
@@ -169,7 +225,6 @@ namespace MAC_1.Views
             _progressTimer.Start();
         }
 
-        // STATE 1 EVENTS
         private void StartDownload_Click(object sender, RoutedEventArgs e)
         {
             if (CategoryCombo.SelectedItem is System.Windows.Controls.ComboBoxItem selected)
@@ -191,7 +246,6 @@ namespace MAC_1.Views
             this.Close();
         }
 
-        // STATE 2 EVENTS
         private void PauseResume_Click(object sender, RoutedEventArgs e)
         {
             if (_task.State == DownloadState.Downloading)
@@ -256,7 +310,6 @@ namespace MAC_1.Views
             element.BeginAnimation(OpacityProperty, anim);
         }
 
-        // STATE 3 EVENTS
         private void OpenFile_Click(object sender, RoutedEventArgs e)
         {
             if (File.Exists(_task.SavePath))
@@ -311,7 +364,6 @@ namespace MAC_1.Views
             }
         }
 
-        // WINDOW EVENTS
         private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (e.ChangedButton == MouseButton.Left) this.DragMove();
