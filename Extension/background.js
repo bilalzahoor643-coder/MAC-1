@@ -8,7 +8,6 @@ class BackgroundService {
 
     this.activeDownloads = new Map();
     this.sentUrls = new Map();
-    this.interceptedUrls = new Map();
     this.settings = {
       enabled: true,
       autoIntercept: true,
@@ -33,7 +32,7 @@ class BackgroundService {
     await this.tryConnect();
     this.updateBadge();
     setInterval(() => this.tryConnect(), 10000);
-    console.log('[MAC-1] Background service initialized');
+    console.log('[MAC-1] Extension initialized');
   }
 
   log(...args) { console.log('[MAC-1]', ...args); }
@@ -59,22 +58,17 @@ class BackgroundService {
   }
 
   setupEventListeners() {
-    // DETECTION LAYER 1: onBeforeRequest (catches JS-triggered downloads like VS Code)
-    chrome.webRequest.onBeforeRequest.addListener(
-      (details) => this.handleBeforeRequest(details),
-      { urls: ['<all_urls>'] },
-      ['requestBody']
-    );
-
-    // DETECTION LAYER 2: onCreated (primary, catches all downloads)
-    chrome.downloads.onCreated.addListener((item) => this.handleDownloadCreated(item));
-
-    // DETECTION LAYER 3: onDeterminingFilename (gets correct filename from headers)
-    chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
-      this.handleDeterminingFilename(item, suggest);
+    chrome.downloads.onCreated.addListener((item) => {
+      console.log('[MAC-1] onCreated FIRED:', item.url, 'mime:', item.mime, 'state:', item.state);
+      this.handleDownloadCreated(item);
     });
 
-    // Metadata capture
+    chrome.downloads.onChanged.addListener((delta) => {
+      if (delta.state) {
+        console.log('[MAC-1] onChanged:', delta.id, 'state:', delta.state.current || delta.state);
+      }
+    });
+
     chrome.webRequest.onBeforeSendHeaders.addListener(
       (d) => this.collector.captureRequestHeaders(d),
       { urls: ['<all_urls>'] },
@@ -87,8 +81,14 @@ class BackgroundService {
       ['responseHeaders', 'extraHeaders']
     );
 
-    // Messages from content script / popup
+    chrome.webRequest.onBeforeRequest.addListener(
+      (d) => this.collector.capturePostData(d),
+      { urls: ['<all_urls>'] },
+      ['requestBody']
+    );
+
     chrome.runtime.onMessage.addListener((msg, sender, respond) => {
+      console.log('[MAC-1] Message received:', msg.type, msg.url || '');
       this.handleMessage(msg, sender, respond);
       return true;
     });
@@ -106,21 +106,51 @@ class BackgroundService {
     chrome.contextMenus.onClicked.addListener((info, tab) => this.handleContextMenu(info, tab));
   }
 
-  isDownloadableFileType(ext) {
-    return ext && this.settings.fileTypes.includes(ext.toLowerCase());
-  }
-
-  isDownloadableUrl(url) {
-    const ext = this.getFileExtension(url);
-    return this.isDownloadableFileType(ext);
-  }
-
   getFileExtension(url) {
     try {
-      const path = new URL(url).pathname.split('.');
-      if (path.length > 1) return path[path.length - 1].toLowerCase().split('?')[0];
+      const p = new URL(url).pathname.split('.');
+      if (p.length > 1) return p[p.length - 1].toLowerCase().split('?')[0];
     } catch (e) {}
     return '';
+  }
+
+  isDownloadableByExtension(url) {
+    const ext = this.getFileExtension(url);
+    return ext && this.settings.fileTypes.includes(ext);
+  }
+
+  isDownloadableByMime(mime) {
+    if (!mime) return false;
+    const m = mime.toLowerCase();
+    return m.includes('application/x-') ||
+           m.includes('application/zip') ||
+           m.includes('application/x-rar') ||
+           m.includes('application/x-7z') ||
+           m.includes('application/octet-stream') ||
+           m.includes('application/pdf') ||
+           m.includes('application/msword') ||
+           m.includes('application/vnd.') ||
+           m.includes('audio/') ||
+           m.includes('video/') ||
+           m.includes('application/x-msdownload') ||
+           m.includes('application/x-apple');
+  }
+
+  isDownloadable(item) {
+    if (this.isDownloadableByExtension(item.url)) return true;
+    if (this.isDownloadableByMime(item.mime)) return true;
+    if (item.filename && this.isDownloadableByExtension(item.filename)) return true;
+    return false;
+  }
+
+  shouldSkipUrl(url) {
+    if (!url) return true;
+    if (url.startsWith('chrome-extension://')) return true;
+    if (url.startsWith('chrome://')) return true;
+    if (url.startsWith('about:')) return true;
+    if (url.startsWith('data:')) return true;
+    if (url.startsWith('blob:')) return true;
+    return false;
   }
 
   extractFilename(url) {
@@ -132,34 +162,10 @@ class BackgroundService {
     return 'download';
   }
 
-  shouldSkipUrl(url) {
-    if (!url) return true;
-    if (url.startsWith('chrome-extension://')) return true;
-    if (url.startsWith('chrome://')) return true;
-    if (url.startsWith('about:')) return true;
-    if (url.startsWith('data:')) return true;
-    return false;
-  }
-
-  markSent(url, data) {
-    this.sentUrls.set(url, { data, time: Date.now() });
-    setTimeout(() => this.sentUrls.delete(url), 15000);
-  }
-
-  hasAlreadySent(url) {
-    return this.sentUrls.has(url);
-  }
-
-  getFilenameFromSuggestion(filename) {
-    if (!filename || filename === 'download' || filename === 'unknown') return null;
-    return filename;
-  }
-
   getFilenameFromHeaders(headers) {
     if (!headers) return null;
     const cd = headers['content-disposition'];
     if (!cd) return null;
-
     const match = cd.match(/filename\*?=(?:UTF-8''|"?)([^";\s]+)/i);
     if (match) {
       let name = match[1].replace(/"/g, '');
@@ -169,8 +175,17 @@ class BackgroundService {
     return null;
   }
 
+  markSent(url) {
+    this.sentUrls.set(url, Date.now());
+    setTimeout(() => this.sentUrls.delete(url), 15000);
+  }
+
+  hasAlreadySent(url) {
+    return this.sentUrls.has(url);
+  }
+
   buildSession(data, filename) {
-    const url = data.url || data.finalUrl || '';
+    const url = data.url || '';
     const tab = data.tab || null;
     let parsedUrl = {};
     try { parsedUrl = new URL(url); } catch (e) {}
@@ -185,8 +200,8 @@ class BackgroundService {
       referrer: data.referrer || tab?.url || '',
       origin: data.origin || '',
       method: data.method || 'GET',
-      userAgent: data.userAgent || navigator.userAgent,
-      platform: data.platform || navigator.platform,
+      userAgent: data.userAgent || '',
+      platform: data.platform || '',
       initiator: data.initiator || '',
       host: parsedUrl.host || '',
       protocol: parsedUrl.protocol || '',
@@ -208,10 +223,11 @@ class BackgroundService {
   }
 
   async sendToService(session) {
+    console.log('[MAC-1] Sending session:', session.filename, session.url);
     if (this.communicator.isConnected) {
       try {
         await this.communicator.sendDownload(session);
-        this.log('Session sent:', session.filename);
+        this.log('Session sent OK:', session.filename);
         this.showNotification('Download Captured', `${session.filename} sent to MAC-1`);
         return true;
       } catch (e) {
@@ -223,38 +239,22 @@ class BackgroundService {
     return false;
   }
 
-  // ═══════════════════════════════════════════════════
-  // DETECTION LAYER 1: onBeforeRequest
-  // Catches JS-triggered downloads (VS Code, etc.)
-  // ═══════════════════════════════════════════════════
-  handleBeforeRequest(details) {
-    if (details.method !== 'GET') return;
-    if (this.shouldSkipUrl(details.url)) return;
-    if (!this.isDownloadableUrl(details.url)) return;
-    if (details.tabId < 0) return;
-    if (this.hasAlreadySent(details.url)) return;
-
-    this.interceptedUrls.set(details.url, {
-      tabId: details.tabId,
-      timestamp: Date.now(),
-      method: details.method,
-      type: details.type
-    });
-
-    setTimeout(() => this.interceptedUrls.delete(details.url), 10000);
-  }
-
-  // ═══════════════════════════════════════════════════
-  // DETECTION LAYER 2: onCreated (primary)
-  // ═══════════════════════════════════════════════════
   async handleDownloadCreated(downloadItem) {
-    if (!this.settings.enabled || !this.settings.autoIntercept) return;
-    if (this.shouldSkipUrl(downloadItem.url)) return;
+    if (!this.settings.enabled || !this.settings.autoIntercept) {
+      this.log('Intercept disabled, skipping');
+      return;
+    }
+    if (this.shouldSkipUrl(downloadItem.url)) {
+      this.log('Skipping URL:', downloadItem.url);
+      return;
+    }
 
-    const ext = this.getFileExtension(downloadItem.url);
-    if (!this.isDownloadableFileType(ext)) return;
+    if (!this.isDownloadable(downloadItem)) {
+      this.log('Not downloadable - url:', downloadItem.url, 'ext:', this.getFileExtension(downloadItem.url), 'mime:', downloadItem.mime);
+      return;
+    }
 
-    this.log('onCreated:', downloadItem.url);
+    this.log('DOWNLOAD DETECTED:', downloadItem.url);
 
     if (this.hasAlreadySent(downloadItem.url)) {
       this.log('Already sent, cancelling');
@@ -264,51 +264,37 @@ class BackgroundService {
 
     this.markSent(downloadItem.url);
 
-    this.collector.collectAllData(downloadItem).then(async (completeData) => {
+    try {
+      await chrome.downloads.cancel(downloadItem.id);
+      this.log('Cancelled download:', downloadItem.id);
+    } catch (e) {
+      this.log('Cancel failed:', e.message);
+    }
+
+    try {
+      const completeData = await this.collector.collectAllData(downloadItem);
       this.activeDownloads.set(downloadItem.id, completeData);
       this.updateBadge();
 
-      try {
-        await chrome.downloads.cancel(downloadItem.id);
-        this.log('Cancelled download:', downloadItem.id);
-      } catch (e) {}
-
-      const filename = this.getFilenameFromSuggestion(downloadItem.filename)
-        || this.getFilenameFromHeaders(completeData.responseHeaders)
+      const filename = this.getFilenameFromHeaders(completeData.responseHeaders)
+        || (downloadItem.filename && downloadItem.filename !== 'download' ? downloadItem.filename : null)
         || this.extractFilename(completeData.url);
 
       const session = this.buildSession(completeData, filename);
       this.sendToService(session);
-    }).catch(async (e) => {
-      this.log('collectAllData failed:', e.message);
-      try { await chrome.downloads.cancel(downloadItem.id); } catch (err) {}
-    });
-  }
+    } catch (e) {
+      this.log('collectAllData error:', e.message);
 
-  // ═══════════════════════════════════════════════════
-  // DETECTION LAYER 3: onDeterminingFilename
-  // Gets correct filename from server headers
-  // ═══════════════════════════════════════════════════
-  handleDeterminingFilename(item, suggest) {
-    if (this.shouldSkipUrl(item.url)) {
-      suggest({ filename: item.filename });
-      return;
+      const session = this.buildSession({
+        url: downloadItem.url,
+        fileSize: downloadItem.fileSize,
+        mimeType: downloadItem.mime,
+        tabId: downloadItem.tabId,
+        method: downloadItem.method,
+        referrer: downloadItem.referrer
+      }, downloadItem.filename || null);
+      this.sendToService(session);
     }
-
-    const ext = this.getFileExtension(item.url);
-    if (!this.isDownloadableFileType(ext)) {
-      suggest({ filename: item.filename });
-      return;
-    }
-
-    let suggestedFilename = item.filename;
-    const filenameFromHeader = this.getFilenameFromHeaders(item.responseHeaders);
-    if (filenameFromHeader) {
-      suggestedFilename = filenameFromHeader;
-      this.log('Filename from Content-Disposition:', filenameFromHeader);
-    }
-
-    suggest({ filename: suggestedFilename, conflictAction: 'uniquify' });
   }
 
   async handleContextMenu(info, tab) {
@@ -318,24 +304,6 @@ class BackgroundService {
       const data = await this.collector.collectFromTab(tab, info.linkUrl);
       const session = this.buildSession(data, null);
       this.sendToService(session);
-    }
-
-    if (info.menuItemId === 'mac1-dl-page') {
-      try {
-        const results = await chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          func: () => Array.from(document.querySelectorAll('a[href]')).map(a => a.href)
-        });
-        const links = results[0]?.result || [];
-        for (const link of links) {
-          if (this.isDownloadableUrl(link) && !this.hasAlreadySent(link)) {
-            this.markSent(link);
-            const data = await this.collector.collectFromTab(tab, link);
-            const session = this.buildSession(data, null);
-            this.sendToService(session);
-          }
-        }
-      } catch (e) {}
     }
   }
 
@@ -347,13 +315,11 @@ class BackgroundService {
           return;
         }
         this.markSent(message.url);
-
         const session = this.buildSession({
           url: message.url,
           tab: message.tab,
           downloadSource: 'click-intercept'
         }, message.filename);
-
         this.log('INTERCEPT_CLICK:', message.url);
         this.sendToService(session);
         respond({ success: true });
@@ -375,24 +341,6 @@ class BackgroundService {
         respond({ enabled: this.settings.enabled });
         break;
 
-      case 'DOWNLOAD_URL':
-        if (!this.hasAlreadySent(message.url)) {
-          this.markSent(message.url);
-          let tab = null;
-          try {
-            if (message.tabId) tab = await chrome.tabs.get(message.tabId);
-            else {
-              const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-              tab = tabs[0];
-            }
-          } catch (e) {}
-          const data = await this.collector.collectFromTab(tab, message.url);
-          const session = this.buildSession(data, null);
-          this.sendToService(session);
-        }
-        respond({ success: true });
-        break;
-
       case 'GET_SETTINGS':
         respond({ settings: this.settings });
         break;
@@ -405,11 +353,6 @@ class BackgroundService {
 
       case 'CHECK_CONNECTION':
         respond({ connected: this.communicator.isConnected });
-        break;
-
-      case 'DOWNLOAD_COMPLETE':
-        this.activeDownloads.delete(message.downloadId);
-        this.updateBadge();
         break;
     }
   }
