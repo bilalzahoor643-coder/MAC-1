@@ -13,6 +13,8 @@ namespace MAC_1.Services
 
         private DownloadPopup? _activePopup;
         private string? _activePopupUrl;
+        private string? _activePopupSessionId;
+        private readonly Dictionary<string, long> _pendingSizeUpdates = new();
 
         public event Action<DownloadTask>? DownloadStarted;
         public event Action? PopupClosed;
@@ -36,20 +38,38 @@ namespace MAC_1.Services
                     TotalSize = session.FileSize > 0 ? session.FileSize : 0,
                     Category = category,
                     ResumeSupported = session.ResumeSupported,
-                    SaveFolder = saveFolder
+                    SaveFolder = saveFolder,
+                    Session = session
                 };
 
                 task.CheckIfArchive();
 
                 _activePopup = new DownloadPopup(task, session);
                 _activePopupUrl = session.Url;
+                _activePopupSessionId = session.SessionId;
                 _activePopup.DownloadStarted += OnDownloadStarted;
                 _activePopup.Closed += (_, _) =>
                 {
                     _activePopup = null;
+                    _activePopupUrl = null;
+                    _activePopupSessionId = null;
                     PopupClosed?.Invoke();
                 };
                 _activePopup.Show();
+
+                System.Diagnostics.Debug.WriteLine($"[MAC-1] Popup shown: filename={filename}, sessionId={session.SessionId}, url={session.Url}");
+
+                // Apply any pending size updates that arrived before popup was created
+                if (_pendingSizeUpdates.TryGetValue(session.Url, out long pendingSize) && pendingSize > 0)
+                {
+                    _activePopup.UpdateFileSizeFromExtension(pendingSize);
+                    _pendingSizeUpdates.Remove(session.Url);
+                }
+                if (_pendingSizeUpdates.TryGetValue(session.FinalUrl, out long pendingSize2) && pendingSize2 > 0)
+                {
+                    _activePopup.UpdateFileSizeFromExtension(pendingSize2);
+                    _pendingSizeUpdates.Remove(session.FinalUrl);
+                }
             });
         }
 
@@ -153,16 +173,53 @@ namespace MAC_1.Services
             _activePopup?.Close();
             _activePopup = null;
             _activePopupUrl = null;
+            _activePopupSessionId = null;
         }
 
         public void UpdateFileSize(string url, long fileSize)
         {
-            if (_activePopup != null && _activePopupUrl == url && fileSize > 0)
+            if (fileSize <= 0) return;
+
+            if (_activePopup != null && _activePopupUrl == url)
             {
                 _activePopup.UpdateFileSizeFromExtension(fileSize);
+            }
+            else
+            {
+                // Store for later — popup may not be open yet
+                _pendingSizeUpdates[url] = fileSize;
             }
         }
 
         public bool HasActivePopup => _activePopup != null;
+
+        public void HandleEngineEvent(DownloadEngineEvent evt)
+        {
+            if (_activePopup == null)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MAC-1] EngineEvent DROPPED: no active popup | type={evt.EventType} sessionId={evt.SessionId} url={evt.Url}");
+                return;
+            }
+
+            // Primary match: use SessionId (stable across redirect resolution)
+            bool matchesSessionId = !string.IsNullOrEmpty(_activePopupSessionId) &&
+                                    _activePopupSessionId == evt.SessionId;
+
+            // Fallback match: URL (for events without SessionId)
+            bool matchesUrl = !string.IsNullOrEmpty(_activePopupUrl) &&
+                              _activePopupUrl == evt.Url;
+
+            if (!matchesSessionId && !matchesUrl)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MAC-1] EngineEvent DROPPED: no match | activeSessionId={_activePopupSessionId}, evtSessionId={evt.SessionId}, activeUrl={_activePopupUrl}, evtUrl={evt.Url}");
+                return;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[MAC-1] EngineEvent OK: type={evt.EventType} state={evt.State} progress={evt.Progress:F1}% sessionId={evt.SessionId}");
+            _activePopup.Dispatcher.Invoke(() =>
+            {
+                _activePopup.UpdateFromEngineEvent(evt);
+            });
+        }
     }
 }

@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "MAC-1.Service/1.0.0": {
+        "runtime": {
+          "MAC-1.Service.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "MAC-1.Service/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

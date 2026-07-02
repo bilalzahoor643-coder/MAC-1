@@ -8,6 +8,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const refreshLinks = document.getElementById('refreshLinks');
   const settingsBtn = document.getElementById('settingsBtn');
   const openAppBtn = document.getElementById('openAppBtn');
+  const debugToggleBtn = document.getElementById('debugToggleBtn');
+  const debugSection = document.getElementById('debugSection');
+  const exportDebugBtn = document.getElementById('exportDebugBtn');
+  const clearDebugBtn = document.getElementById('clearDebugBtn');
+  const debugStatus = document.getElementById('debugStatus');
 
   init();
 
@@ -109,6 +114,46 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshLinks.addEventListener('click', loadLinks);
     settingsBtn.addEventListener('click', openSettings);
     openAppBtn.addEventListener('click', openApp);
+    debugToggleBtn.addEventListener('click', toggleDebugSection);
+    exportDebugBtn.addEventListener('click', exportDebugReport);
+    clearDebugBtn.addEventListener('click', clearDebugLog);
+  }
+
+  // ===== PHASE 2.5: DEBUG FUNCTIONS =====
+  function toggleDebugSection() {
+    const isVisible = debugSection.style.display !== 'none';
+    debugSection.style.display = isVisible ? 'none' : 'block';
+  }
+
+  async function exportDebugReport() {
+    debugStatus.textContent = 'Generating report...';
+    try {
+      const response = await chrome.runtime.sendMessage({ type: 'GET_DEBUG_REPORT' });
+      if (response?.report) {
+        // Download as file
+        const blob = new Blob([response.report], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `mac1-debug-${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+        debugStatus.textContent = `Report exported (${response.report.split('\n').length} lines)`;
+      } else {
+        debugStatus.textContent = 'No debug data available';
+      }
+    } catch (e) {
+      debugStatus.textContent = 'Error: ' + e.message;
+    }
+  }
+
+  async function clearDebugLog() {
+    try {
+      await chrome.runtime.sendMessage({ type: 'CLEAR_DEBUG_LOG' });
+      debugStatus.textContent = 'Debug log cleared';
+    } catch (e) {
+      debugStatus.textContent = 'Error: ' + e.message;
+    }
   }
 
   async function toggleEnabled() {

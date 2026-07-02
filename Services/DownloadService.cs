@@ -33,7 +33,9 @@ namespace MAC_1.Services
         {
             foreach (var task in Downloads.Where(d => d.State == DownloadState.Downloading))
             {
-                DownloadEngine.Instance.PauseDownload(task);
+                var sessionId = task.Session?.SessionId ?? "";
+                if (string.IsNullOrEmpty(sessionId)) continue;
+                _ = SendServiceAction("pause-download", sessionId);
             }
         }
 
@@ -41,8 +43,22 @@ namespace MAC_1.Services
         {
             foreach (var task in Downloads.Where(d => d.State == DownloadState.Paused))
             {
-                DownloadEngine.Instance.ResumeDownload(task);
+                var sessionId = task.Session?.SessionId ?? "";
+                if (string.IsNullOrEmpty(sessionId)) continue;
+                _ = SendServiceAction("resume-download", sessionId);
             }
+        }
+
+        private static async System.Threading.Tasks.Task SendServiceAction(string action, string sessionId)
+        {
+            try
+            {
+                var httpClient = new System.Net.Http.HttpClient { Timeout = System.TimeSpan.FromSeconds(5) };
+                var json = System.Text.Json.JsonSerializer.Serialize(new { sessionId });
+                var content = new System.Net.Http.StringContent(json, System.Text.Encoding.UTF8, "application/json");
+                await httpClient.PostAsync($"http://127.0.0.1:57575/api/{action}", content);
+            }
+            catch { }
         }
     }
 }

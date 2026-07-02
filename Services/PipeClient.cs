@@ -16,9 +16,13 @@ namespace MAC_1.Services
         private CancellationTokenSource? _cts;
         private bool _isConnected;
         private bool _isRunning;
+        private static readonly string _logFile = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "MAC-1", "wpf-pipe.log");
 
         public event Action<DownloadSession>? DownloadSessionReceived;
         public event Action<string, long>? SizeUpdateReceived;
+        public event Action<DownloadEngineEvent>? EngineEventReceived;
         public event Action? Connected;
         public event Action? Disconnected;
 
@@ -27,6 +31,12 @@ namespace MAC_1.Services
         public void Start()
         {
             if (_isRunning) return;
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(_logFile)!);
+                File.WriteAllText(_logFile, $"[{DateTime.Now:HH:mm:ss}] PipeClient starting\n");
+            }
+            catch { }
             _cts = new CancellationTokenSource();
             _isRunning = true;
             _ = ConnectAsync(_cts.Token);
@@ -43,6 +53,9 @@ namespace MAC_1.Services
 
         private async Task ConnectAsync(CancellationToken ct)
         {
+            int retryMs = 300;
+            const int maxRetryMs = 5000;
+
             while (!ct.IsCancellationRequested && _isRunning)
             {
                 try
@@ -53,9 +66,10 @@ namespace MAC_1.Services
                         PipeDirection.InOut,
                         PipeOptions.Asynchronous);
 
-                    await _client.ConnectAsync(3000, ct);
+                    await _client.ConnectAsync(2000, ct);
 
                     _isConnected = true;
+                    retryMs = 300;
                     Connected?.Invoke();
                     Log("Connected to MAC-1 Service");
 
@@ -74,7 +88,12 @@ namespace MAC_1.Services
 
                 if (!ct.IsCancellationRequested && _isRunning)
                 {
-                    try { await Task.Delay(3000, ct); } catch { break; }
+                    try
+                    {
+                        await Task.Delay(retryMs, ct);
+                        retryMs = Math.Min(retryMs * 2, maxRetryMs);
+                    }
+                    catch { break; }
                 }
             }
         }
@@ -87,6 +106,7 @@ namespace MAC_1.Services
                 using var writer = new BinaryWriter(pipe, Encoding.UTF8, leaveOpen: true);
 
                 await WriteMessageAsync(writer, new PipeMessage { Type = "ready" });
+                Log("Sent 'ready' to service");
 
                 _ = SendHeartbeatsAsync(writer, ct);
 
@@ -95,16 +115,21 @@ namespace MAC_1.Services
                     try
                     {
                         var msg = await ReadMessageAsync(reader);
-                        if (msg == null) break;
+                        if (msg == null)
+                        {
+                            Log("ReadMessage returned null — stream closed");
+                            break;
+                        }
 
+                        Log($"Received message: type={msg.Type}, dataLen={msg.Data?.Length ?? 0}");
                         await ProcessMessageAsync(msg);
                     }
-                    catch (EndOfStreamException) { break; }
-                    catch (IOException) { break; }
+                    catch (EndOfStreamException) { Log("EndOfStream"); break; }
+                    catch (IOException ex) { Log($"IOException: {ex.Message}"); break; }
                 }
             }
-            catch (OperationCanceledException) { }
-            catch { }
+            catch (OperationCanceledException) { Log("Monitor cancelled"); }
+            catch (Exception ex) { Log($"Monitor error: {ex.Message}"); }
         }
 
         private async Task SendHeartbeatsAsync(BinaryWriter writer, CancellationToken ct)
@@ -127,15 +152,25 @@ namespace MAC_1.Services
                 case "download_event":
                     try
                     {
+                        Log($"Deserializing download_event, data preview: {(msg.Data?.Length > 200 ? msg.Data[..200] + "..." : msg.Data)}");
                         var session = JsonSerializer.Deserialize<DownloadSession>(msg.Data,
                             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                         if (session != null && !string.IsNullOrEmpty(session.Url))
                         {
+                            Log($"[PASS] Stage 5: Session received via pipe: filename={session.Filename}, sessionId={session.SessionId}, url={session.Url}");
                             DownloadSessionReceived?.Invoke(session);
-                            Log($"Download event: {session.Filename}");
+                            Log("DownloadSessionReceived event fired");
+                        }
+                        else
+                        {
+                            Log($"[FAIL] Stage 5: Deserialize returned null or empty URL. session={session != null}, url={session?.Url}");
                         }
                     }
-                    catch (Exception ex) { Log($"Deserialize error: {ex.Message}"); }
+                    catch (Exception ex)
+                    {
+                        Log($"[FAIL] Stage 5: Deserialize ERROR: {ex.Message}");
+                        Log($"Stack: {ex.StackTrace}");
+                    }
                     break;
 
                 case "size_update":
@@ -152,6 +187,31 @@ namespace MAC_1.Services
                     break;
 
                 case "heartbeat_ack":
+                    break;
+
+                case "engine_event":
+                    try
+                    {
+                        var engineEvent = JsonSerializer.Deserialize<DownloadEngineEvent>(msg.Data,
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                        if (engineEvent != null)
+                        {
+                            Log($"[PASS] Stage 11: Engine event received: type={engineEvent.EventType} state={engineEvent.State} progress={engineEvent.Progress:F1}% sessionId={engineEvent.SessionId}");
+                            EngineEventReceived?.Invoke(engineEvent);
+                        }
+                        else
+                        {
+                            Log($"[FAIL] Stage 11: Engine event deserialize returned null");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log($"[FAIL] Stage 11: Engine event deserialize ERROR: {ex.Message}");
+                    }
+                    break;
+
+                default:
+                    Log($"Unknown message type: {msg.Type}");
                     break;
             }
         }
@@ -177,7 +237,8 @@ namespace MAC_1.Services
                     int length = reader.ReadInt32();
                     if (length <= 0 || length > 10 * 1024 * 1024) return null;
                     byte[] data = reader.ReadBytes(length);
-                    return JsonSerializer.Deserialize<PipeMessage>(Encoding.UTF8.GetString(data));
+                    return JsonSerializer.Deserialize<PipeMessage>(Encoding.UTF8.GetString(data),
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 }
                 catch { return null; }
             });
@@ -200,7 +261,8 @@ namespace MAC_1.Services
 
         private void Log(string message)
         {
-            Console.WriteLine($"[PipeClient] {message}");
+            var line = $"[{DateTime.Now:HH:mm:ss.fff}] {message}";
+            try { File.AppendAllText(_logFile, line + "\n"); } catch { }
         }
 
         private class SizeUpdateRpc
@@ -212,6 +274,7 @@ namespace MAC_1.Services
 
     public class PipeMessage
     {
+        public int Version { get; set; } = 1;
         public string Type { get; set; } = string.Empty;
         public string Data { get; set; } = string.Empty;
         public string RequestId { get; set; } = string.Empty;

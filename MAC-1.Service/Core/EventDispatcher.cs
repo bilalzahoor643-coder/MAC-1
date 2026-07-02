@@ -21,12 +21,26 @@ namespace MAC_1.Service.Core
             File.WriteAllText(_logFile, $"[{DateTime.Now:HH:mm:ss}] Dispatcher initialized\n");
         }
 
-        private Listeners.PipeServer? _pipeServerInternal;
-        private Listeners.PipeServer? Pipe => _pipeServer ?? _pipeServerInternal;
+        private Listeners.PipeServer? Pipe => _pipeServer;
 
         public async Task DispatchAsync(DownloadSession session)
         {
             _queue.Enqueue(session);
+
+            // Save to SQLite BEFORE dispatching — uses same SessionId throughout
+            string sessionId = string.Empty;
+            try
+            {
+                var entity = Database.DatabaseService.Instance.SaveSessionTransactional(session);
+                sessionId = entity.SessionId;
+                session.SessionId = sessionId;
+                Log($"Saved to DB: {session.Filename} (id={sessionId})");
+                Log($"DB Entity: RawHeadersJson.Length={entity.RawHeadersJson?.Length ?? 0}, RawCookiesJson.Length={entity.RawCookiesJson?.Length ?? 0}, RawBrowserHeadersJson.Length={entity.RawBrowserHeadersJson?.Length ?? 0}, RawPostDataJson.Length={entity.RawPostDataJson?.Length ?? 0}");
+            }
+            catch (Exception ex)
+            {
+                Log($"DB save FAILED (non-fatal): {ex.Message}");
+            }
 
             var pipe = Pipe;
             bool connected = pipe?.IsClientConnected ?? false;
@@ -38,7 +52,14 @@ namespace MAC_1.Service.Core
                 {
                     await pipe.SendDownloadEventAsync(session);
                     _queue.MarkDispatched();
-                    Log($"Dispatched to WPF: {session.Filename}");
+
+                    // Update status — same SessionId, never changes
+                    if (!string.IsNullOrEmpty(sessionId))
+                    {
+                        Database.DatabaseService.Instance.UpdateStatusTransactional(sessionId, "dispatched");
+                    }
+
+                    Log($"Dispatched to WPF: {session.Filename} (id={sessionId})");
                 }
                 catch (Exception ex)
                 {
@@ -47,7 +68,7 @@ namespace MAC_1.Service.Core
             }
             else
             {
-                Log($"WPF not connected, queued: {session.Filename}");
+                Log($"WPF not connected, queued: {session.Filename} (id={sessionId})");
             }
         }
 

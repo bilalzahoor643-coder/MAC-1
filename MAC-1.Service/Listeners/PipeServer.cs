@@ -106,24 +106,35 @@ namespace MAC_1.Service.Listeners
         {
             try
             {
+                Log("Monitor started");
                 while (!ct.IsCancellationRequested && pipe.IsConnected)
                 {
                     try
                     {
                         var msg = await ReadMessageAsync(reader);
-                        if (msg == null) break;
+                        if (msg == null)
+                        {
+                            Log("ReadMessage returned null — disconnecting");
+                            break;
+                        }
+
+                        Log($"Received from WPF: type={msg.Type}");
 
                         if (msg.Type == "heartbeat")
                         {
                             await WriteMessageAsync(writer, new PipeMessage { Type = "heartbeat_ack" });
                         }
+                        else if (msg.Type == "ready")
+                        {
+                            Log("WPF ready — flush pending events");
+                        }
                     }
-                    catch (EndOfStreamException) { break; }
-                    catch (IOException) { break; }
+                    catch (EndOfStreamException) { Log("EndOfStream"); break; }
+                    catch (IOException ex) { Log($"IOException: {ex.Message}"); break; }
                 }
             }
-            catch (OperationCanceledException) { }
-            catch { }
+            catch (OperationCanceledException) { Log("Monitor cancelled"); }
+            catch (Exception ex) { Log($"Monitor error: {ex.Message}"); }
             finally
             {
                 lock (_lock)
@@ -155,18 +166,18 @@ namespace MAC_1.Service.Listeners
 
             if (writer == null || pipe == null || !pipe.IsConnected)
             {
-                Console.WriteLine($"[PipeServer] SendToClient SKIP: writer={writer != null}, pipe={pipe != null}, connected={pipe?.IsConnected}");
+                Log($"SKIP: writer={writer != null}, pipe={pipe != null}, connected={pipe?.IsConnected}");
                 return;
             }
 
             try
             {
                 await WriteMessageAsync(writer, msg);
-                Console.WriteLine($"[PipeServer] SendToClient OK: {msg.Type}");
+                Log($"SENT: type={msg.Type}, dataLen={msg.Data?.Length ?? 0}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[PipeServer] SendToClient FAIL: {ex.Message}");
+                Log($"FAIL: type={msg.Type}, error={ex.Message}");
             }
         }
 
@@ -188,6 +199,15 @@ namespace MAC_1.Service.Listeners
             });
         }
 
+        public async Task SendEngineEventAsync(DownloadEventArgs args)
+        {
+            await SendToClientAsync(new PipeMessage
+            {
+                Type = "engine_event",
+                Data = JsonSerializer.Serialize(args)
+            });
+        }
+
         private async Task<PipeMessage?> ReadMessageAsync(BinaryReader reader)
         {
             return await Task.Run(() =>
@@ -197,7 +217,8 @@ namespace MAC_1.Service.Listeners
                     int length = reader.ReadInt32();
                     if (length <= 0 || length > 10 * 1024 * 1024) return null;
                     byte[] data = reader.ReadBytes(length);
-                    return JsonSerializer.Deserialize<PipeMessage>(Encoding.UTF8.GetString(data));
+                    return JsonSerializer.Deserialize<PipeMessage>(Encoding.UTF8.GetString(data),
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 }
                 catch { return null; }
             });

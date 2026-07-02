@@ -50,29 +50,6 @@ namespace MAC_1.ViewModels
         }
 
         public void ToggleExpand() => IsExpanded = !IsExpanded;
-
-        public void Pause()
-        {
-            DownloadEngine.Instance.PauseDownload(Task);
-        }
-
-        public void Resume()
-        {
-            DownloadEngine.Instance.ResumeDownload(Task);
-        }
-
-        public void Cancel()
-        {
-            DownloadEngine.Instance.CancelDownload(Task);
-        }
-
-        public void Start()
-        {
-            Task.SavePath = System.IO.Path.Combine(
-                DataService.Instance.GetSavePathForCategory(Task.Category),
-                Task.Filename);
-            _ = DownloadEngine.Instance.StartDownloadAsync(Task);
-        }
     }
 
     public class ChunkInfo

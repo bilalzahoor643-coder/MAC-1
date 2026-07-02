@@ -29,8 +29,8 @@ namespace MAC_1.Models
         public string SavePath { get => _savePath; set { _savePath = value; OnPropertyChanged(); } }
         public string Filename { get => _filename; set { _filename = value; OnPropertyChanged(); } }
         public long TotalSize { get => _totalSize; set { _totalSize = value; OnPropertyChanged(); OnPropertyChanged(nameof(SizeDisplay)); } }
-        public long DownloadedSize { get => _downloadedSize; set { _downloadedSize = value; OnPropertyChanged(); OnPropertyChanged(nameof(SizeDisplay)); } }
-        public double Progress { get => _progress; set { _progress = value; OnPropertyChanged(); } }
+        public long DownloadedSize { get => _downloadedSize; set { _downloadedSize = TotalSize > 0 ? Math.Min(value, TotalSize) : value; OnPropertyChanged(); OnPropertyChanged(nameof(SizeDisplay)); } }
+        public double Progress { get => _progress; set { _progress = Math.Clamp(value, 0, 100); OnPropertyChanged(); } }
         public DownloadState State { get => _state; set { _state = value; OnPropertyChanged(); OnPropertyChanged(nameof(StateText)); } }
         public string Speed { get => _speed; set { _speed = value; OnPropertyChanged(); } }
         public string TimeRemaining { get => _timeRemaining; set { _timeRemaining = value; OnPropertyChanged(); } }
@@ -43,6 +43,7 @@ namespace MAC_1.Models
         public bool IsArchive { get; set; }
         public bool ResumeSupported { get; set; } = true;
         public CancellationTokenSource? Cts { get; set; }
+        public DownloadSession? Session { get; set; }
 
         public string SizeDisplay
         {

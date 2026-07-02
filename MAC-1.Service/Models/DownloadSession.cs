@@ -34,7 +34,7 @@ namespace MAC_1.Service.Models
         [JsonPropertyName("websiteTitle")] public string WebsiteTitle { get; set; } = string.Empty;
         [JsonPropertyName("contentDisposition")] public string ContentDisposition { get; set; } = string.Empty;
         [JsonPropertyName("statusCode")] public int StatusCode { get; set; }
-        [JsonPropertyName("contentLength")] public string ContentLength { get; set; } = string.Empty;
+        [JsonPropertyName("contentLength")] public long ContentLength { get; set; }
         [JsonPropertyName("acceptRanges")] public string AcceptRanges { get; set; } = string.Empty;
         [JsonPropertyName("contentEncoding")] public string ContentEncoding { get; set; } = string.Empty;
         [JsonPropertyName("etag")] public string ETag { get; set; } = string.Empty;
@@ -46,15 +46,20 @@ namespace MAC_1.Service.Models
         [JsonPropertyName("postData")] public object? PostData { get; set; }
         [JsonPropertyName("tab")] public TabData? Tab { get; set; }
         [JsonPropertyName("redirectChain")] public List<string> RedirectChain { get; set; } = new();
+        [JsonPropertyName("sessionId")] public string SessionId { get; set; } = string.Empty;
+        [JsonPropertyName("browserRawHeaders")] public List<RawHeader>? BrowserRawHeaders { get; set; }
+        [JsonPropertyName("browserResponseRawHeaders")] public List<RawHeader>? BrowserResponseRawHeaders { get; set; }
+        [JsonPropertyName("browserRequestType")] public string BrowserRequestType { get; set; } = string.Empty;
     }
 
+    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
     public class CookieData
     {
         [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
         [JsonPropertyName("value")] public string Value { get; set; } = string.Empty;
         [JsonPropertyName("domain")] public string Domain { get; set; } = string.Empty;
         [JsonPropertyName("path")] public string Path { get; set; } = string.Empty;
-        [JsonPropertyName("expires")] public long? Expires { get; set; }
+        [JsonPropertyName("expires")] [JsonConverter(typeof(FlexibleLongConverter))] public long? Expires { get; set; }
         [JsonPropertyName("httpOnly")] public bool HttpOnly { get; set; }
         [JsonPropertyName("secure")] public bool Secure { get; set; }
         [JsonPropertyName("sameSite")] public string SameSite { get; set; } = string.Empty;
@@ -74,16 +79,61 @@ namespace MAC_1.Service.Models
         [JsonPropertyName("status")] public string Status { get; set; } = string.Empty;
     }
 
+    public class RawHeader
+    {
+        [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
+        [JsonPropertyName("value")] public string Value { get; set; } = string.Empty;
+    }
+
     public class SizeUpdateRequest
     {
         [JsonPropertyName("url")] public string? Url { get; set; }
         [JsonPropertyName("fileSize")] public long FileSize { get; set; }
     }
 
+    public class StartDownloadRequest
+    {
+        [JsonPropertyName("sessionId")] public string SessionId { get; set; } = string.Empty;
+        [JsonPropertyName("savePath")] public string? SavePath { get; set; }
+    }
+
     public class PipeMessage
     {
+        [JsonPropertyName("version")] public int Version { get; set; } = 1;
         [JsonPropertyName("type")] public string Type { get; set; } = string.Empty;
         [JsonPropertyName("data")] public string Data { get; set; } = string.Empty;
         [JsonPropertyName("requestId")] public string RequestId { get; set; } = string.Empty;
+    }
+
+    public class FlexibleLongConverter : JsonConverter<long?>
+    {
+        public override long? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            switch (reader.TokenType)
+            {
+                case JsonTokenType.Null:
+                case JsonTokenType.None:
+                    return null;
+                case JsonTokenType.Number:
+                    if (reader.TryGetInt64(out long lval)) return lval;
+                    if (reader.TryGetDouble(out double dval)) return (long)dval;
+                    return null;
+                case JsonTokenType.String:
+                    var s = reader.GetString();
+                    if (string.IsNullOrEmpty(s)) return null;
+                    if (long.TryParse(s, out long val)) return val;
+                    if (double.TryParse(s, out double dval2)) return (long)dval2;
+                    return null;
+                case JsonTokenType.True: return 1;
+                case JsonTokenType.False: return 0;
+                default: return null;
+            }
+        }
+
+        public override void Write(Utf8JsonWriter writer, long? value, JsonSerializerOptions options)
+        {
+            if (value.HasValue) writer.WriteNumberValue(value.Value);
+            else writer.WriteNullValue();
+        }
     }
 }

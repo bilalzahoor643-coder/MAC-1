@@ -63,7 +63,24 @@
       </div>
     </div>
 
+    <div class="debug-section" style="padding: 8px; border-top: 1px solid #333; display: none;" id="debugSection">
+      <button id="exportDebugBtn" class="footer-btn" style="width: 100%; margin-bottom: 4px;">
+        Export Debug Report
+      </button>
+      <button id="clearDebugBtn" class="footer-btn" style="width: 100%;">
+        Clear Debug Log
+      </button>
+      <div id="debugStatus" style="font-size: 11px; color: #888; margin-top: 4px;"></div>
+    </div>
+
     <div class="footer">
+      <button id="debugToggleBtn" class="footer-btn" title="Toggle Debug Mode">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
+          <path d="M12 6v6l4 2"/>
+        </svg>
+        Debug
+      </button>
       <button id="settingsBtn" class="footer-btn">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="3"/>

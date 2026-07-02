@@ -4,6 +4,8 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using FontAwesome.WPF;
+using MAC_1.Models;
+using MAC_1.Services;
 using MAC_1.ViewModels;
 
 namespace MAC_1.Views
@@ -127,15 +129,34 @@ namespace MAC_1.Views
                 icon.Icon = FontAwesomeIcon.PlayCircle;
                 icon.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#4CAF50"));
                 label.Text = "RESUME";
-                Services.DownloadService.Instance.PauseAll();
+                _ = ServiceActionAll("pause-download");
             }
             else
             {
                 icon.Icon = FontAwesomeIcon.PauseCircle;
                 icon.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF9800"));
                 label.Text = "PAUSE";
-                Services.DownloadService.Instance.ResumeAll();
+                _ = ServiceActionAll("resume-download");
             }
+        }
+
+        private static async System.Threading.Tasks.Task ServiceActionAll(string action)
+        {
+            try
+            {
+                var downloads = DataService.Instance.Downloads;
+                var active = downloads.Where(d => d.State == DownloadState.Downloading || d.State == DownloadState.Paused).ToList();
+                var httpClient = new System.Net.Http.HttpClient { Timeout = System.TimeSpan.FromSeconds(5) };
+                foreach (var task in active)
+                {
+                    var sessionId = task.Session?.SessionId ?? "";
+                    if (string.IsNullOrEmpty(sessionId)) continue;
+                    var json = System.Text.Json.JsonSerializer.Serialize(new { sessionId });
+                    var content = new System.Net.Http.StringContent(json, System.Text.Encoding.UTF8, "application/json");
+                    _ = httpClient.PostAsync($"http://127.0.0.1:57575/api/{action}", content);
+                }
+            }
+            catch { }
         }
     }
 }

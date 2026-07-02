@@ -15,9 +15,9 @@ namespace MAC_1.Services
         private readonly PipeClient _pipeClient;
 
         public event Action<DownloadSession>? DownloadSessionReceived;
-        public event Action<DownloadData>? DownloadReceived;
         public event Action<string>? StatusChanged;
         public event Action<string, long>? SizeUpdateReceived;
+        public event Action<DownloadEngineEvent>? EngineEventReceived;
 
         public bool IsRunning => _pipeClient.IsConnected;
         public int Port => 57575;
@@ -37,6 +37,9 @@ namespace MAC_1.Services
 
             _pipeClient.SizeUpdateReceived += (url, size) =>
                 SizeUpdateReceived?.Invoke(url, size);
+
+            _pipeClient.EngineEventReceived += evt =>
+                EngineEventReceived?.Invoke(evt);
         }
 
         public void Start()
